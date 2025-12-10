@@ -3,6 +3,7 @@ import library.persistence.database_setup as ds
 import library.service.author as author
 import library.service.reader as reader
 import library.service.books as books
+import library.service.aggregations as aggs
 import library.service.data_generator as gen
 
 
@@ -20,7 +21,7 @@ def main():
     # }
     # reader.update_reader(1, update_reader)
     
-    books.delete_book(8692603)
-    
+    # books.delete_book(8692603)
+    aggs.get_top_loaned_book_per_year_with_authors()
 
     # author.add_author(auth)

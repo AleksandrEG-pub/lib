@@ -4,6 +4,7 @@ CREATE TABLE if not exists authors (
     last_name VARCHAR(100) NOT NULL,
     birth_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP DEFAULT NULL,
     CONSTRAINT unique_product_region_date UNIQUE (first_name, last_name, birth_date)
 );
 
@@ -17,6 +18,7 @@ CREATE TABLE if not exists books (
     copies_available INTEGER DEFAULT 1 CHECK (copies_available >= 0),
     total_copies INTEGER DEFAULT 1 CHECK (total_copies >= 1),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP DEFAULT NULL,
     FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE,
     CONSTRAINT unique_isbn UNIQUE (isbn),
     CONSTRAINT unique_title_author UNIQUE (author_id, title, publication_year)
@@ -28,6 +30,7 @@ CREATE TABLE if not exists readers (
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     registration_date DATE DEFAULT CURRENT_DATE,
+    deleted_at TIMESTAMP DEFAULT NULL,
     CONSTRAINT unique_email UNIQUE (email)
 );
 
@@ -38,19 +41,8 @@ CREATE TABLE if not exists loans (
     loan_date DATE DEFAULT CURRENT_DATE NOT NULL,
     due_date DATE NOT NULL,
     return_date DATE,
+    deleted_at TIMESTAMP DEFAULT NULL,
     FOREIGN KEY (book_id) REFERENCES books(id),
     FOREIGN KEY (reader_id) REFERENCES readers(id),
     CONSTRAINT unique_loan UNIQUE (reader_id, book_id)
 );
-
-ALTER TABLE if exists authors 
-ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
-
-ALTER TABLE if exists books 
-ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
-
-ALTER TABLE if exists readers 
-ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
-
-ALTER TABLE if exists loans 
-ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
