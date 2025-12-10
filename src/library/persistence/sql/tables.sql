@@ -5,13 +5,13 @@ CREATE TABLE if not exists authors (
     birth_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP DEFAULT NULL,
-    CONSTRAINT unique_product_region_date UNIQUE (first_name, last_name, birth_date)
+    CONSTRAINT unique_author_name_birth UNIQUE (first_name, last_name, birth_date)
 );
 
 CREATE TABLE if not exists books (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    author_id INTEGER NOT NULL,
+    author_id BIGINT NOT NULL,
     isbn VARCHAR(20) UNIQUE NOT NULL,
     publication_year INTEGER,
     genre VARCHAR(100),
@@ -36,13 +36,14 @@ CREATE TABLE if not exists readers (
 
 CREATE TABLE if not exists loans (
     id BIGSERIAL PRIMARY KEY,
-    book_id INTEGER NOT NULL,
-    reader_id INTEGER NOT NULL,
+    book_id BIGINT NOT NULL,
+    reader_id BIGINT NOT NULL,
     loan_date DATE DEFAULT CURRENT_DATE NOT NULL,
     due_date DATE NOT NULL,
     return_date DATE,
     deleted_at TIMESTAMP DEFAULT NULL,
     FOREIGN KEY (book_id) REFERENCES books(id),
     FOREIGN KEY (reader_id) REFERENCES readers(id),
-    CONSTRAINT unique_loan UNIQUE (reader_id, book_id)
+    CONSTRAINT unique_loan UNIQUE (reader_id, book_id),
+    ADD CONSTRAINT check_due_date CHECK (due_date > loan_date)
 );
