@@ -2,6 +2,8 @@ from datetime import datetime, date, timedelta
 import pandas as pd
 from typing import List, Union
 import logging
+
+from sqlalchemy import text
 import library.service.validations as validations
 from library.persistence.database_connection import db
 
@@ -59,7 +61,14 @@ def add_loan(loans: Union[dict, List[dict]]):
 
 
 def get_loans_by_return_date():
-    pass
+    """Выбор всех заказов с указанием даты возврата или значения по умолчанию"""
+    query = """
+    select id, book_id, reader_id, loan_date, due_date,
+        coalesce (return_date, due_date + INTERVAL '7 days') as return_date
+    from loans
+    where deleted_at is null
+    """
+    return db.sql_to_df(query=query)
 
 
 def get_loans_dayly():
