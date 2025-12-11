@@ -56,7 +56,6 @@ def update_reader(id: int, reader: dict):
     if set(reader.keys()) != reader_properties:
         logging.error(f"Can only update: {reader_properties}")
         return False
-    
     with db.sqla_connection() as connection:
         result = connection.execute(
             text("SELECT id FROM readers WHERE id = :id and deleted_at is null"),

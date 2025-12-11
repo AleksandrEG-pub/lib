@@ -106,7 +106,6 @@ def add_loan(loans: Union[dict, List[dict]]):
 
 def get_loans_by_return_date():
     logging.info(f"searching loans with return date")
-    """Выбор всех заказов с указанием даты возврата или значения по умолчанию"""
     query = """
     select id, book_id, reader_id, loan_date, due_date,
         coalesce (return_date, due_date + INTERVAL '7 days') as return_date

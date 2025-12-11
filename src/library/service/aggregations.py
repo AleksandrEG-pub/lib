@@ -8,7 +8,7 @@ from library.persistence.database_connection import db
 def reader_author_union(limit_authors: int = 5, limit_readers: int = 5):
     if not isinstance(limit_authors, int) or not isinstance(limit_readers, int):
         raise ValueError("Limits must be integers")
-    logging.info(f"saerching authors/readers")
+    logging.info(f"searching authors/readers")
     with db.sqla_connection() as connection:
         query = """
             (select a.first_name, a.last_name, 'author' as role

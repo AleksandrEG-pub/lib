@@ -47,6 +47,14 @@ CREATE TABLE if not exists loans (
     CONSTRAINT unique_loan UNIQUE (reader_id, book_id)
 );
 
+-- for top N aggregate
 CREATE INDEX if not exists idx_books_publication_year ON books(publication_year);
+-- for author join
 CREATE INDEX if not exists idx_books_author_id ON books(author_id);
+-- for patitioning by book_id
 CREATE INDEX if not exists idx_loans_book_id ON loans(book_id);
+
+CREATE INDEX if not exists idx_authors_deleted_at ON authors(deleted_at);
+CREATE INDEX if not exists idx_books_deleted_at ON books(deleted_at);
+CREATE INDEX if not exists idx_readers_deleted_at ON readers(deleted_at);
+CREATE INDEX if not exists idx_loans_deleted_at ON loans(deleted_at);
