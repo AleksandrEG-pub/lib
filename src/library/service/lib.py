@@ -60,7 +60,7 @@ def main():
     # optional generate data
     # _generate_data()
 
-    # _create_update_opertaions()
+    # _create_update_operations()
     # get info operations
     books.get_all_books_with_authors(1, 10)
 
