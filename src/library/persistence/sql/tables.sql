@@ -44,6 +44,9 @@ CREATE TABLE if not exists loans (
     deleted_at TIMESTAMP DEFAULT NULL,
     FOREIGN KEY (book_id) REFERENCES books(id),
     FOREIGN KEY (reader_id) REFERENCES readers(id),
-    CONSTRAINT unique_loan UNIQUE (reader_id, book_id),
-    ADD CONSTRAINT check_due_date CHECK (due_date > loan_date)
+    CONSTRAINT unique_loan UNIQUE (reader_id, book_id)
 );
+
+CREATE INDEX if not exists idx_books_publication_year ON books(publication_year);
+CREATE INDEX if not exists idx_books_author_id ON books(author_id);
+CREATE INDEX if not exists idx_loans_book_id ON loans(book_id);

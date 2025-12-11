@@ -78,9 +78,9 @@ class Database:
                 yield conn
     
             
-    def sql_to_df(self, query: str):
+    def sql_to_df(self, query: str, params: dict = {}):
         with self._engine.connect() as connection:
-            return pd.read_sql_query(sql=query, con=connection)
+            return pd.read_sql_query(sql=query, con=connection, params=params)
 
 
 # Create a singleton instance

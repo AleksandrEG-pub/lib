@@ -19,7 +19,6 @@ def handle_missing_values(df: pd.DataFrame, df_name: str):
 
 
 def validate_columns(df: pd.DataFrame, required_cols: list, df_name: str) -> pd.DataFrame:
-    # validation of columns
     if required_cols:
         missing = [c for c in required_cols if c not in df.columns]
         if missing:
@@ -36,7 +35,6 @@ def handle_duplicates(df: pd.DataFrame, df_name: str):
     duplicates_df = df[df.duplicated()]
     if duplicates_df.size > 0:
         logging.info(f"Found duplicate [{df_name}]: {len(duplicates_df)}")
-        # etl_csv.write_to_csv(duplicates_df, duplicate_orders_file)
         return df.drop_duplicates()
     else:
         logging.info(f"no duplicates in [{df_name}]")

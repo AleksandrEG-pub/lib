@@ -1,6 +1,7 @@
 import logging
 from typing import List, Union
 import pandas as pd
+import re
 from sqlalchemy import text
 import library.service.validations as validations
 from library.persistence.database_connection import db
@@ -9,11 +10,26 @@ from library.persistence.database_connection import db
 resource_name = "readers"
 
 
+def _validate_email(df: pd.DataFrame):
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    valid_mask = df['email'].apply(
+        lambda x: bool(re.match(email_pattern, str(x))) if pd.notna(x) else False
+    )
+    invalid_emails = df.loc[~valid_mask, 'email'].dropna().unique()
+    for email in invalid_emails:
+        logging.warning(f"Invalid email format: {email}")
+    valid_df = df[valid_mask].copy()
+    invalid_count = len(df) - len(valid_df)
+    if invalid_count > 0:
+        logging.info(f"Filtered out {invalid_count} rows with invalid email formats")
+    return valid_df
+
+
 def _validate_reader(df: pd.DataFrame):
     required_cols = ['first_name', 'last_name', 'email']
     df = validations.validate_columns(df, required_cols, resource_name)
     df = validations.handle_duplicates(df, resource_name)
-    # validate email
+    df = _validate_email(df)
     df = validations.handle_missing_values(df, resource_name)
     return df
 

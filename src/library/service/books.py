@@ -10,25 +10,57 @@ resource_name = "books"
 
 
 def _handle_year(df: pd.DataFrame):
+    original_size = len(df)
     current_year = datetime.now().year
     df = df[df['publication_year'] <= current_year]
+    removed_rows = original_size - len(df) > 0
+    if(removed_rows > 0):
+        logging.info(f'filtered {removed_rows} by publication year')
     return df
 
 
 def _handle_copies(df: pd.DataFrame):
+    original_size = len(df)
     df = df[df['copies_available'] <= df['total_copies']]
     df = df[df['copies_available'] >= 0]
+    removed_rows = original_size - len(df)
+    if(removed_rows > 0):
+        logging.info(f'filtered {removed_rows} by copies amount')
     return df
 
 
 def _handle_isbn_duplicates(df: pd.DataFrame):
-    return df.drop_duplicates(subset='isbn')
-
-
-def _validate_author(df: pd.DataFrame):
-    # query authors of books
-    # if missing, again - log somewhere
+    original_size = len(df)
+    df = df.drop_duplicates(subset='isbn')
+    removed_rows = original_size - len(df) > 0
+    if(removed_rows > 0):
+        logging.info(f'removed {removed_rows} duplicate isbns')
     return df
+
+
+def _validate_author(df: pd.DataFrame) -> pd.DataFrame:
+    unique_author_ids = df['author_id'].dropna().unique().tolist()
+    if not unique_author_ids:
+        return df
+    with db.sqla_connection() as connection:
+        result = connection.execute(
+            text("""
+                SELECT id 
+                FROM authors 
+                WHERE id IN :ids 
+                AND deleted_at IS NULL
+            """),
+            {"ids": tuple(unique_author_ids)}
+        )
+        valid_author_ids = {row[0] for row in result.fetchall()}
+        invalid_author_ids = set(unique_author_ids) - valid_author_ids
+        for invalid_id in invalid_author_ids:
+            logging.warning(f"Author ID {invalid_id} not found or is deleted")
+        valid_df = df[df['author_id'].isin(valid_author_ids)]
+        invalid_count = len(df) - len(valid_df)
+        if invalid_count > 0:
+            logging.info(f"Filtered out {invalid_count} rows with invalid author IDs")
+        return valid_df
 
 
 def _validate_books(df: pd.DataFrame):
@@ -92,15 +124,12 @@ def delete_book(id: int):
 def get_all_books_with_authors(from_id: int = 0, limit: int = 1000) -> pd.DataFrame:
     """
     Get all gook with information about authors
-    Paginated
     """
     return db.sql_to_df(f"""
-select * from books b 
-join authors a on b.author_id = a.id
-where b.id > {from_id}
-limit {limit};
-""")
-
-
-# 4. CTE и рекурсивные запросы:
-#    – Создание иерархического запроса для получения всех книг и их авторов
+                select * from books b 
+                join authors a on b.author_id = a.id
+                where b.id > {from_id}
+                and b.deleted_at is null
+                limit {limit};
+                """
+    )

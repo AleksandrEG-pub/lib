@@ -3,10 +3,14 @@ import pandas as pd
 from sqlalchemy import text
 from library.persistence.database_connection import db
 
-def get_loans_by_return_date(limit_authors: int = 100, limit_readers: int = 100):
-    """Выбор всех заказов с указанием даты возврата или значения по умолчанию"""
+
+
+def reader_author_union(limit_authors: int = 5, limit_readers: int = 5):
+    if not isinstance(limit_authors, int) or not isinstance(limit_readers, int):
+        raise ValueError("Limits must be integers")
+    logging.info(f"saerching authors/readers")
     with db.sqla_connection() as connection:
-        query = f"""
+        query = """
             (select a.first_name, a.last_name, 'author' as role
             from authors a 
             limit :limit_authors)
@@ -20,24 +24,27 @@ def get_loans_by_return_date(limit_authors: int = 100, limit_readers: int = 100)
             {"limit_authors": limit_authors, "limit_readers": limit_readers}
         )
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        logging.info(f"authors/readers found: {len(df)}")
         return df
-    
+
 
 def get_count_loan_over_book():
-    """Использование оконных функций для нумерации заказов"""
+    logging.info(f"searching loans")
     with db.sqla_connection() as connection:
         query = f"""
                 select *, 
                 row_number() over(partition by book_id)
                 from loans l 
+                where l.deleted_at is null
                 """
         result = connection.execute(text(query))
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        logging.info(f"loans found: {len(df)}")
         return df
-    
+
 
 def get_top_loaned_book_per_year_with_authors():
-    """Использование оконных функций для нумерации заказов"""
+    logging.info(f"searching top loaned books per year")
     with db.sqla_connection() as connection:
         query = "drop MATERIALIZED VIEW IF EXISTS  book_loan_counts"
         result = connection.execute(text(query))
@@ -50,8 +57,19 @@ AS (
         COUNT(l.id) as loan_count
     FROM books b
     JOIN loans l ON l.book_id = b.id
+    where b.deleted_at is null
+    and l.deleted_at is null
     GROUP BY b.id, b.publication_year
 )
+"""
+        result = connection.execute(text(query))
+        query = f"""
+DROP INDEX if exists idx_book_loan_counts_year_loan
+"""
+        result = connection.execute(text(query))
+        query = f"""
+CREATE UNIQUE INDEX if not exists idx_book_loan_counts_year_loan 
+ON book_loan_counts(publication_year, loan_count DESC, book_id);
 """
         result = connection.execute(text(query))
         query = f"""
@@ -78,8 +96,10 @@ select b.id, b.publication_year, a.id, b.title, a.id, (a.first_name || ' ' || a.
 from books_per_year bpy
 join books b on bpy.book_id = b.id
 join authors a on b.author_id  = a.id
+where b.deleted_at is null
+and a.deleted_at is null
 """
         result = connection.execute(text(query))
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        logging.info(f"found top loaned books per year: {len(df)}")
         return df
-    

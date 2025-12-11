@@ -18,7 +18,7 @@ def setup_database():
             logging.error(f"failed to read init scripts from file {tables_sql_file}")
         with db.cursor() as cursor:
             cursor.execute(sql_commands)
-            logging.info("tables created")
+            logging.info("tables set up")
             if cursor.rowcount > 0:
                 logging.info(f"updated {cursor.rowcount}")
 

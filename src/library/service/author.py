@@ -6,8 +6,12 @@ import logging
 
 
 def _handle_dates(df: pd.DataFrame):
+    original_size = len(df)
     df['birth_date'] = pd.to_datetime(
         df['birth_date'], format='%Y-%m-%d', errors='coerce')
+    removed_rows = original_size - len(df) > 0
+    if(removed_rows > 0):
+        logging.info(f'filtered {removed_rows} by wrong birth_date')
     return df
 
 
@@ -35,13 +39,3 @@ def add_author(author: Union[dict, List[dict]]):
     if isinstance(author, list):
         author_df = pd.DataFrame(author)
     _add_authors(author_df)
-
-
-def get_readers_and_authors():
-    pass
-
-# 2. Вставка данных (CRUD):
-# -- Добавление авторов
-
-# 3. Использование UNION vs UNION ALL:
-#    – Объединение списков читателей и авторов
