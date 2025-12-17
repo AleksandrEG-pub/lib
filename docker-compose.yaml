@@ -1,0 +1,20 @@
+name: it_one
+
+services:
+  database-lib:
+    image: postgres:17.5
+    restart: unless-stopped
+    ports:
+      - "10452:5432"
+    env_file:
+      - .env
+    volumes:
+      # - it_one_db_data:/var/lib/postgresql/data
+      - ./postgres_config/postgresql.conf:/etc/postgresql/postgresql.conf
+    # command: >
+      # postgres -c config_file=/etc/postgresql/postgresql.conf
+    # command: >
+      # tail -f /dev/null
+
+# volumes:
+  # it_one_db_data:

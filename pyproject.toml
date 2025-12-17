@@ -1,0 +1,35 @@
+    [build-system]
+    requires = ["setuptools>=61.0", "wheel"]
+    build-backend = "setuptools.build_meta"
+
+    [project]
+    name = "library"
+    version = "0.0.1"
+    readme = "README.md"
+    requires-python = ">=3.12"
+    dependencies = [
+        "psycopg2-binary==2.9.11",
+        "pandas==2.3.3",
+        "python-dotenv==1.2.1",
+        "SQLAlchemy==2.0.44",
+        "pytest==9.0.2",
+        "pytest-mock==3.15.1",
+        "Faker==38.2.0",
+    ]
+
+    [project.scripts]
+    library = "library.lib:main"
+
+    [tool.setuptools.packages.find]
+    where = ["src"]
+
+    [tool.pytest.ini_options]
+    testpaths = ["tests"]
+    python_files = ["test_*.py"]
+    python_classes = ["Test*"]
+    python_functions = ["test_*"]
+    addopts = [
+        "-v",
+        "--strict-markers",
+        "--tb=short",
+    ]
