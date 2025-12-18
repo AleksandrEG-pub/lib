@@ -19,7 +19,9 @@
 
     [project.scripts]
     library = "library.lib:main"
-    data_warehouse = "library.data_warehouse:main"
+    star = "data_warehouse.star:main"
+    data_vault = "data_warehouse.data_vault:main"
+    partitions = "data_warehouse.partitions:main"
 
     [tool.setuptools.packages.find]
     where = ["src"]
