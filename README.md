@@ -3,7 +3,7 @@
 Contains only scripts with manual launch. 
 No api exist.
 
-Installation:
+### Installation
 ```
 python -m venv .venv
 source .venv/bin/activate
@@ -11,15 +11,18 @@ pip install --upgrade pip
 pip install -e .
 ```
 
+### Database
+
 Database(pg postgres:17.5) is located in docker. To launch database run
 ```
 ./start-database.sh
 ```
-
-Database configurations
+Database configuration 
 ```
 ./.env
 ```
+
+### Project stucture
 
 Project split on modules:
 - week 3
@@ -29,7 +32,7 @@ Project split on modules:
   - data_vault
   - partitions
 
-can be launched with 
+Main execution scripts: 
 ```
 python ./src/library/__main__.py
 python ./src/data_warehouse/star/__main__.py
@@ -37,10 +40,11 @@ python ./src/data_warehouse/data_vault/__main__.py
 python ./src/data_warehouse/partition/__main__.py
 ```
 
-Data generation
+### Data generation
 
-**Important:** Modules generate data on start. 
-Data might not be able to run twice due to constraints in database.
+> Modules generate data on start. 
+> 
+> Data might not be able to run twice due to constraints in database.
 
 Sql scripts located in following directories:
 - library
@@ -51,3 +55,12 @@ Sql scripts located in following directories:
   - ./src/data_warehouse/data_vault/sql
 - partition
   - ./src/data_warehouse/partition/sql
+
+
+### Erd
+Star:
+![Star](./erd/star.png "Star")
+
+
+Data vault:
+![Star](./erd/data_vault.png "Star")
