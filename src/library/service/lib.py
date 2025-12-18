@@ -8,14 +8,6 @@ import library.service.aggregations as aggs
 import library.service.data_generation.library_data_generator as gen
 
 
-def _generate_data():
-    gen.generate_random_data(
-        num_authors=10_000,
-        num_books=300_000,
-        num_readers=10_000,
-        num_loans=100_000,
-    )
-
 def _create_update_opertaions():
     # add resources
     new_author = {
@@ -59,9 +51,9 @@ def _create_update_opertaions():
 def main():
     ds.setup_database()
     # optional generate data
-    _generate_data()
+    gen.generate_random_data()
 
-    # _create_update_operations()
+    _create_update_opertaions()
     # get info operations
     books.get_all_books_with_authors(1, 10)
 

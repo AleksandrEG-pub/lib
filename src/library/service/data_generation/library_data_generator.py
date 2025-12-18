@@ -17,8 +17,8 @@ def batch_size(total: int) -> int:
 def generate_random_data(
     num_authors: int = 100,
     num_books: int = 10_000,
-    num_readers: int = 1000,
-    num_loans: int = 100
+    num_readers: int = 100,
+    num_loans: int = 200
 ) -> None:
     """Generate complete dataset"""
     print("Starting data generation...")
