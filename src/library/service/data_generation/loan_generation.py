@@ -27,18 +27,18 @@ def _generate_loan_dates() -> Dict[str, Union[str, None]]:
         'return_date': return_date_str
     }
 
-def _get_rnd_book_id_handler(book_limit: int = 1000):
-    query = f"SELECT id FROM books LIMIT {book_limit}"
-    book_ids = db.sql_to_df(query)['id'].tolist()
+def _get_rnd_book_id_handler(part: float = 0.1, book_limit: int = 1000):
     def get_next():
+        query = f"SELECT id FROM books TABLESAMPLE SYSTEM({part}) LIMIT {book_limit}"
+        book_ids = db.sql_to_df(query)['id'].tolist()
         return random.choice(book_ids)
     return get_next
 
 
-def _get_rnd_reader_id_handler(reader_limit: int = 1000):
-    query = f"SELECT id FROM readers LIMIT {reader_limit}"
-    book_ids = db.sql_to_df(query)['id'].tolist()
+def _get_rnd_reader_id_handler(part: float = 0.1, reader_limit: int = 1000):
     def get_next():
+        query = f"SELECT id FROM readers TABLESAMPLE SYSTEM({part}) LIMIT {reader_limit}"
+        book_ids = db.sql_to_df(query)['id'].tolist()
         return random.choice(book_ids)
     return get_next
 

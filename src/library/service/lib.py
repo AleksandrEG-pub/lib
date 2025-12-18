@@ -10,10 +10,10 @@ import library.service.data_generation.library_data_generator as gen
 
 def _generate_data():
     gen.generate_random_data(
-        num_authors=1_000_000,
-        num_books=30_000_000,
-        num_readers=1_000_000,
-        num_loans=10_000_000,
+        num_authors=10_000,
+        num_books=300_000,
+        num_readers=10_000,
+        num_loans=100_000,
     )
 
 def _create_update_opertaions():

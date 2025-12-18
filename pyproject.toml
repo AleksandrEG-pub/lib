@@ -19,6 +19,7 @@
 
     [project.scripts]
     library = "library.lib:main"
+    data_warehouse = "library.data_warehouse:main"
 
     [tool.setuptools.packages.find]
     where = ["src"]

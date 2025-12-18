@@ -69,6 +69,8 @@ def generate_batches(
         List of batches (each batch is a list of items)
     """
     all_batches = 0
+    if batch_size == 0:
+        batch_size = 1
     full_batches = total_items // batch_size
     last_batch_size = total_items % batch_size
     print(f"Generating {total_items} items in {full_batches + (1 if last_batch_size > 0 else 0)} batches...")
