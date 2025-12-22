@@ -13,7 +13,7 @@ services:
     image: clickhouse:25.11.3.54-jammy
     restart: unless-stopped
     env_file:
-      - clickhouse.env
+      - ./src/clickhouse/clickhouse.env
     ports:
       - "10453:8123"
       - "10454:9000"
