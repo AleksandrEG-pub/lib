@@ -92,4 +92,22 @@ Execution log of the 'log_analytic.py' script will show exact statistic for quer
 - consumed memory
 - total retrieved rows
 - total bytes
-- total bytes
+
+### Grafana, week 5
+
+```
+./start-grafana.sh
+```
+Gran configuration is in directory 
+```
+./grafana
+```
+Contains default user:
+- login: admin
+- password: admin
+
+Contains preconfigured datasource for clickhouse on http://clickhouse:9000
+Contains preconfigured dashboards:
+- web_logs: custom with basic info about web_logs table
+- ClickHouse - Data Analysis: default clickhouse configuration
+- ClickHouse - Query Analysis: default clickhouse configuration
