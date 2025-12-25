@@ -3,6 +3,7 @@ import psycopg2
 import logging
 from library.persistence.database_connection import db
 
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 tables_sql_file = f"{script_dir}/sql/tables.sql"
@@ -16,6 +17,7 @@ def setup_database():
             sql_commands = file.read()
         except FileNotFoundError:
             logging.error(f"failed to read init scripts from file {tables_sql_file}")
+            return
         with db.cursor() as cursor:
             cursor.execute(sql_commands)
             logging.info("tables set up")

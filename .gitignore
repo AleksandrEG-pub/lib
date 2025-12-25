@@ -7,3 +7,4 @@ local
 *.py[cod]
 *$py.class
 *.egg-info/
+.idea

@@ -14,6 +14,7 @@ class Database:
         self._config = None
         self._engine: Engine = None
 
+
     @property
     def config(self):
         """Lazy-loaded configuration property"""
@@ -34,6 +35,7 @@ class Database:
             connection_string = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
             self._engine = create_engine(connection_string)
         return self._config
+
 
     @contextmanager
     def connection(self):
@@ -57,6 +59,7 @@ class Database:
                 yield cursor
             finally:
                 cursor.close()
+
 
     def df_to_sql(self, table: str, df: pd.DataFrame):
         with self._engine.connect() as connection:

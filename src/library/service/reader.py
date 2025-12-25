@@ -40,7 +40,7 @@ def _add_reader(readers_df: pd.DataFrame):
         logging.info(f"saving {len(df)} {resource_name}")
         db.df_to_sql(resource_name, df)
     else:
-        logging.info("no valid {resource_type} to save")
+        logging.info("no valid {resource_name} to save")
 
 
 def add_reader(readers: Union[dict, List[dict]]):

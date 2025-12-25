@@ -1,0 +1,7 @@
+customer_id,name,email,phone
+1,'Bruce Banner', 'bruce.banner@gamma-lab.com', '+971506666006'
+2,'Natasha Romanoff', 'blackwidow@shield.gov', '+971508888008'
+3,'Peter Parker', 'peterp@midtownhigh.edu', '+971509999009'
+1,'Bruce Banner', 'bruce.banner@gamma-lab.com', '+971588888888'
+2,'Natasha Romanova', 'blackwidow@shield.gov', '+971508888008'
+3,'Peter Parker', 'peterp@par.ker', '+971509999009'
