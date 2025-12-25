@@ -1,0 +1,129 @@
+[metadata]
+project_name = "ClickHouse Performance Analysis"
+description = "Study project demonstrating ClickHouse optimizations with projections and materialized views"
+
+# Schema and data setup
+[setup]
+create_table = """
+CREATE OR REPLACE TABLE web_logs (
+    timestamp DateTime,
+    user_id UInt64,
+    url String,
+    response_time UInt32,
+    status_code UInt16
+) ENGINE = MergeTree()
+ORDER BY (timestamp, user_id)
+PARTITION BY toYYYYMM(timestamp)
+"""
+
+insert_data = """
+INSERT INTO web_logs (timestamp, user_id, url, response_time, status_code)
+SELECT 
+    now() - randUniform(0, 3600 * 24 * 30 * 6) as timestamp,  
+    rand() % 10000 + 1 as user_id,               
+    ['/home', '/products', '/cart', '/checkout', 
+    '/login', '/api/data', '/images/1.jpg', 
+    '/profile', '/search?q=clickhouse'][rand() % 9 + 1] as url,
+    randLogNormal(5, 1.5) as response_time,    
+    [200, 200, 200, 200, 404, 500, 302, 301][rand() % 8 + 1] as status_code
+FROM numbers(10000000)  -- 10 million rows
+"""
+enable_query_log = "SET log_queries = 1"
+
+# Performance optimizations
+[optimizations]
+drop_projection_day = "ALTER TABLE web_logs DROP PROJECTION IF EXISTS day_projection"
+create_projection_day = """
+Alter table web_logs
+add projection day_projection 
+(
+  SELECT
+      toDate(timestamp) AS date,
+      count(url) AS request_count
+  GROUP BY date
+)
+"""
+materialize_projection_day = "Alter table web_logs materialize projection day_projection"
+
+drop_projection_avg_response = "ALTER TABLE web_logs DROP PROJECTION IF EXISTS avg_response_projection"
+create_projection_avg_response = """
+Alter table web_logs
+add projection avg_response_projection 
+(
+    SELECT url, avg(response_time) AS avg_response
+    GROUP BY url
+)
+"""
+materialize_projection_avg_response = "Alter table web_logs materialize projection avg_response_projection"
+
+drop_projection_user_requests = "ALTER TABLE web_logs DROP PROJECTION IF EXISTS user_requests_count_projection"
+create_projection_user_requests = """
+Alter table web_logs
+add projection user_requests_count_projection
+(
+    SELECT user_id, count(url)
+    GROUP BY user_id
+)
+"""
+materialize_projection_user_requests = "Alter table web_logs materialize projection user_requests_count_projection"
+
+drop_error_count_view = "DROP VIEW IF EXISTS error_counts_mv"
+create_error_count_view = """
+CREATE MATERIALIZED VIEW error_counts_mv
+ENGINE = SummingMergeTree()
+ORDER BY (date, status_code_group)
+POPULATE
+AS SELECT
+    toDate(timestamp) AS date,
+    intDiv(status_code, 100) AS status_code_group,  -- 4xx, 5xx groups
+    count() AS error_count
+FROM web_logs
+WHERE status_code >= 400
+GROUP BY date, status_code_group
+"""
+
+# Analytical queries
+[queries]
+
+daily_request_count = """
+SELECT 
+  toDate(timestamp) AS date,
+  count(url) AS request_count
+FROM web_logs wl
+GROUP BY toDate(wl.timestamp)
+"""
+
+avg_response_per_url = """
+SELECT url, avg(response_time) AS avg_response_ms
+FROM web_logs wl 
+GROUP BY url
+"""
+
+error_counts = """
+select toDate(timestamp), intDiv(status_code, 100), count()
+from web_logs wl
+where intDiv(status_code, 100) in (4, 5)
+group by toDate(timestamp), intDiv(status_code, 100)
+order by toDate(timestamp)
+"""
+
+error_counts_view = """
+SELECT date, status_code_group, error_count
+FROM error_counts_mv 
+ORDER BY date DESC, status_code_group
+"""
+
+top_users_by_requests = """
+SELECT user_id, count(url) as request_count
+FROM web_logs wl 
+GROUP BY user_id 
+ORDER BY count(url) DESC
+LIMIT 10
+"""
+
+[explanations]
+hourly_users = "This query benefits from the primary index on (timestamp, user_id) which allows efficient time-range filtering and user counting."
+daily_requests = "Uses day_projection which pre-aggregates daily metrics, reducing data reads from millions to hundreds of rows."
+avg_response = "Leverages avg_response_projection that pre-computes averages per URL, making this query extremely fast."
+error_counts = "Materialized view error_counts_mv maintains real-time error counts using SummingMergeTree for efficient aggregation."
+top_users = "user_requests_count_projection pre-aggregates user activity, enabling fast top-N queries without full table scans."

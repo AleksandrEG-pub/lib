@@ -85,3 +85,4 @@ class Database:
 
 # Create a singleton instance
 db = Database()
+    

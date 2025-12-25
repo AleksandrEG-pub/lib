@@ -13,7 +13,7 @@ pip install -e .
 
 ### Database
 
-Database(pg postgres:17.5) is located in docker. To launch database run
+Database(pg postgres:17.5) is located in docker (port 10452). To launch database run
 ```
 ./start-database.sh
 ```
@@ -31,6 +31,8 @@ Project split on modules:
   - star
   - data_vault
   - partitions
+- week 5
+  - clickhouse
 
 Main execution scripts: 
 ```
@@ -38,6 +40,7 @@ python ./src/library/__main__.py
 python ./src/data_warehouse/star/__main__.py
 python ./src/data_warehouse/data_vault/__main__.py
 python ./src/data_warehouse/partition/__main__.py
+python ./src/clickhouse/__main__.py
 ```
 
 ### Data generation
@@ -57,10 +60,54 @@ Sql scripts located in following directories:
   - ./src/data_warehouse/partition/sql
 
 
-### Erd
+### Erd, week 4
 Star:
 ![Star](./erd/star.png "Star")
 
 
 Data vault:
 ![Star](./erd/data_vault.png "Star")
+
+
+### Clickhouse, week 5
+
+Clickhouse (clickhouse:25.11.3.54-jammy) is located in docker (port 10453, 10454). To launch run
+```
+./start-clickhouse.sh
+```
+Clickhouse configuration 
+```
+./src/clickhouse/clickhouse.env
+```
+
+Clickhouse module presented as a flow in file ./src/clickhouse/log_analytic.py.
+
+First created a table 'web_logs'. 
+Then it populated with random data for 10mil rows.
+Then different analytic queries are performed in 2 steps, before and after optimization.
+Optimization for different query is different.
+
+Execution log of the 'log_analytic.py' script will show exact statistic for queries, such as:
+- exetution time
+- consumed memory
+- total retrieved rows
+- total bytes
+
+### Grafana, week 5
+
+```
+./start-grafana.sh
+```
+Gran configuration is in directory 
+```
+./grafana
+```
+Contains default user:
+- login: admin
+- password: admin
+
+Contains preconfigured datasource for clickhouse on http://clickhouse:9000
+Contains preconfigured dashboards:
+- web_logs: custom with basic info about web_logs table
+- ClickHouse - Data Analysis: default clickhouse configuration
+- ClickHouse - Query Analysis: default clickhouse configuration
