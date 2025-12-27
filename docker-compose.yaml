@@ -1,6 +1,12 @@
 name: it_one
 
 services:
+  s3:
+    image: chrislusf/seaweedfs:4.04
+    restart: unless-stopped
+    ports:
+      - "10456:9333"
+
   database-lib:
     image: postgres:17.5
     restart: unless-stopped
