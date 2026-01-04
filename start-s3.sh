@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker compose --file ./docker-compose.yaml up -d s3
+docker compose --file ./docker-compose.yaml up -d seaweedfs

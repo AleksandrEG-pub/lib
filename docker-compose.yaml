@@ -1,11 +1,14 @@
 name: it_one
 
 services:
-  s3:
+  seaweedfs:
     image: chrislusf/seaweedfs:4.04
-    restart: unless-stopped
     ports:
-      - "10456:9333"
+      - "10456:8333"
+      - "10457:23646"
+    command: "server -s3 -dir=/data"
+    env_file:
+      - ./s3/.env
 
   database-lib:
     image: postgres:17.5

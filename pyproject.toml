@@ -1,41 +1,46 @@
-    [build-system]
-    requires = ["setuptools>=61.0", "wheel"]
-    build-backend = "setuptools.build_meta"
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
-    [project]
-    name = "library"
-    version = "0.0.1"
-    readme = "README.md"
-    requires-python = ">=3.12"
-    dependencies = [
-        "psycopg2-binary==2.9.11",
-        "pandas==2.3.3",
-        "python-dotenv==1.2.1",
-        "SQLAlchemy==2.0.44",
-        "pytest==9.0.2",
-        "pytest-mock==3.15.1",
-        "Faker==38.2.0",
-        "clickhouse-connect==0.10.0",
-        "tomli==2.3.0",
-    ]
+[project]
+name = "data_migrations"
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "psycopg2-binary==2.9.11",
+    "pandas==2.3.3",
+    "python-dotenv==1.2.1",
+    "SQLAlchemy==2.0.44",
+    "pytest==9.0.2",
+    "pytest-mock==3.15.1",
+    "Faker==38.2.0",
+    "clickhouse-connect==0.10.0",
+    "tomli==2.3.0",
+    "pyarrow==22.0.0",
+    "s3fs==2025.12.0",
+    "adbc-driver-manager==1.9.0",
+    "adbc-driver-postgresql==1.9.0"
+]
 
-    [project.scripts]
-    library = "library.lib:main"
-    star = "data_warehouse.star:main"
-    data_vault = "data_warehouse.data_vault:main"
-    partitions = "data_warehouse.partitions:main"
-    clickhouse = "clickhouse:main"
+[project.scripts]
+library = "library.lib:main"
+star = "data_warehouse.star:main"
+data_vault = "data_warehouse.data_vault:main"
+partitions = "data_warehouse.partitions:main"
+clickhouse = "clickhouse:main"
+s3 = "s3_upload:main"
 
-    [tool.setuptools.packages.find]
-    where = ["src"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
-    [tool.pytest.ini_options]
-    testpaths = ["tests"]
-    python_files = ["test_*.py"]
-    python_classes = ["Test*"]
-    python_functions = ["test_*"]
-    addopts = [
-        "-v",
-        "--strict-markers",
-        "--tb=short",
-    ]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
