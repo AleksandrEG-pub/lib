@@ -4,8 +4,7 @@ import s3_upload.etl_s3 as etls3
 def main():
     logging.basicConfig(level=logging.INFO)
     logging.info("loading to s3 from postgres")
-    # etls3.init_database()
-    data = None
+    etls3.init_database()
     data = etls3.load_products()
     etls3.s3_upload_parquet(data)
     etls3.s3_upload_iceberg(data)

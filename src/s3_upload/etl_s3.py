@@ -3,6 +3,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import database.database_setup as ds
 from database.adbc_connection import adbc_connect
+from s3_upload.s3 import s3manager
 import s3fs
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -24,32 +25,12 @@ def load_products():
 
 
 def s3_upload_parquet(pa_table: pa.Table):
-    S3_ENDPOINT = "http://localhost:10456"
-    BUCKET_NAME = "it_one_bucket"
-    BUCKET_NAME = f"/buckets/{BUCKET_NAME}"
-    fs = s3fs.S3FileSystem(
-        anon=True,
-        client_kwargs={'endpoint_url': S3_ENDPOINT}
-    )
-    file = f'{BUCKET_NAME}/products.parquet'
-    
-    try:
-        if not fs.exists(BUCKET_NAME):
-            fs.mkdir(BUCKET_NAME)
-            print(f"Bucket '{BUCKET_NAME}' created")
-    except Exception as e:
-        print(f"Error checking/creating bucket: {e}")
-    
-    with fs.open(file, 'wb') as f:
-        # f.write('New log entry\n')
-        # pq.write_table(pa_table, file, filesystem=fs, compression=None)  
-        # pq.write_table(pa_table, f, compression=None)  
-        pq.write_table(pa_table, f)
-    # with fs.open(file, 'r') as f:
-        # content = f.read()
-    with fs.open(file, "rb") as f:
-        table = pq.read_table(f)
-        print(table)
+    file = 'products.parquet'
+    BUCKET_NAME = "it_one_bucket",
+    s3manager.create_bucket(BUCKET_NAME)
+    s3manager.write_as_parquet(BUCKET_NAME, file, pa_table)
+    result_pa_table = s3manager.read_parquet(BUCKET_NAME, file)
+    print(result_pa_table)
         
         
 def s3_upload_iceberg(data):
