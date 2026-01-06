@@ -20,18 +20,18 @@ class Database:
         """Lazy-loaded configuration property"""
         if self._config is None:
             load_dotenv()
+            dbname = os.getenv('POSTGRES_DB')
+            user = os.getenv('POSTGRES_USER')
+            password = os.getenv('POSTGRES_PASSWORD')
+            host = os.getenv('DB_HOST')
+            port = os.getenv('DB_PORT')
             self._config = {
-                'dbname': os.getenv('POSTGRES_DB'),
-                'user': os.getenv('POSTGRES_USER'),
-                'password': os.getenv('POSTGRES_PASSWORD'),
-                'host': os.getenv('DB_HOST'),
-                'port': os.getenv('DB_PORT')
+                'dbname': dbname,
+                'user': user,
+                'password': password,
+                'host': host,
+                'port': port,
             }
-            dbname = self._config['dbname']
-            user = self._config['user']
-            password = self._config['password']
-            host = self._config['host']
-            port = self._config['port']
             connection_string = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
             self._engine = create_engine(connection_string)
         return self._config

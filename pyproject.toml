@@ -18,9 +18,11 @@ dependencies = [
     "clickhouse-connect==0.10.0",
     "tomli==2.3.0",
     "pyarrow==22.0.0",
+    "pyarrow-stubs==20.0.0.20251215",
     "s3fs==2025.12.0",
     "adbc-driver-manager==1.9.0",
-    "adbc-driver-postgresql==1.9.0"
+    "adbc-driver-postgresql==1.9.0",
+    "pyiceberg[sql-sqlite]==0.10.0"
 ]
 
 [project.scripts]

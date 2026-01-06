@@ -1,25 +1,24 @@
 import logging
-import s3_upload.etl_s3 as etls3
+import s3_upload.sql_service as sql
+import s3_upload.product_service as ps
+from s3_upload.s3 import s3manager
+
 
 def main():
-    logging.basicConfig(level=logging.INFO)
-    logging.info("loading to s3 from postgres")
-    etls3.init_database()
-    data = etls3.load_products()
-    etls3.s3_upload_parquet(data)
-    etls3.s3_upload_iceberg(data)
-    
-    # 1. Развернуть сервер S3 (например, MinIO, см. статью о сервере MinIO), 
-    #   либо использовать подключение к сервису одного из провайдеров (например, Yandex Cloud)
-    # 2. Написать Python-скрипт чтения данных из PostgreSQL, 
-    #   их преобразования и сохранения полученного результата в S3-совместимое хранилище в формате Parquet и в формате Iceberg 
-    #   с использованием одной из библиотек
-    # 3. Сравнить содержание целевых данных в S3 для разных форматов
-    # Ожидаемый результат:
-    # 1. Данные, записанные в таблицу PosrgreSQL после запуска скрипта транслируются в S3
-    # 2. Описание содержимого данных в S3 в формате Parquet и Iceberg – что присутствует в каждом, 
-    # назначение полученных объектов, отличия
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.getLogger("pyiceberg").setLevel(logging.DEBUG)
+
+    logging.info("creating tables in postgres")
+    sql.init_database()
+
+    logging.info("init s3 bucket")
+    s3manager.init_bucket()
+
+    logging.info("uploading products to s3 as parquet")
+    ps.upload_products_from_sql_to_s3_as_parquet()
+
+    logging.info("uploading products to iceberg")
+    ps.upload_products_from_sql_to_iceberg()
 
 if __name__ == "__main__":
     main()
-    
