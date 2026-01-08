@@ -39,6 +39,4 @@ class S3Manager:
             table = self._convert_numeric_to_decimal(table)
             return table
 
-
-
 s3manager = S3Manager()
