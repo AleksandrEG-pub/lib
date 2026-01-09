@@ -1,7 +1,7 @@
 import logging
 import s3_upload.sql_service as sql
 import s3_upload.product_service as ps
-from s3_upload.s3 import s3manager
+from s3_upload.s3_manager import s3manager
 
 
 def main():

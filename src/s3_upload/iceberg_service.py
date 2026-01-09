@@ -1,7 +1,7 @@
 import pyiceberg.catalog as ice_cat
 import pyiceberg.table as ice_table
 import s3_upload.sql_service as sql
-from s3_upload.s3 import s3manager
+from s3_upload.s3_manager import s3manager
 
 
 def get_or_create_catalog_s3_sql(catalog_name: str, bucket: str):
@@ -11,10 +11,9 @@ def get_or_create_catalog_s3_sql(catalog_name: str, bucket: str):
         **{
             "type": "sql",
             "uri": database_url,
-            "warehouse": f"s3://{bucket}/warehouse",
-            "s3.endpoint": s3manager.s3_endpoint,
-            "s3.path-style-access": "true",
-            "s3.region": "us-east-1",
+            "warehouse": f"s3://{bucket}/icebearg_warehouse",
+            "s3.endpoint": s3manager.endpoint,
+            "s3.region": s3manager.region,
         }
     )
     return catalog

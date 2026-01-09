@@ -1,7 +1,7 @@
 import logging
 import pyarrow as pa
 from database.adbc_connection import adbc_connect
-from s3_upload.s3 import s3manager
+from s3_upload.s3_manager import s3manager
 
 from pyiceberg.catalog import Catalog
 from pyiceberg.table import Table
@@ -41,19 +41,14 @@ def upload_products_from_sql_to_s3_as_parquet():
 
 
 def upload_products_from_sql_to_iceberg():
-    catalog_name = "store"
-    namespace = "main"
-    table_name = "products"
-    bucket_name = s3manager.bucket
-
     logging.info("getting catalog")
     catalog: Catalog = i_serv.get_or_create_catalog_s3_sql(
-        catalog_name, bucket_name)
+        s3manager.catalog, s3manager.bucket)
     products_pa_table: pa.Table = _load_products()
     logging.info("getting table")
     iceberg_table: Table = i_serv.get_or_create_table(
-        table_name=table_name,
-        namespace=namespace,
+        table_name=s3manager.table,
+        namespace=s3manager.namespace,
         catalog=catalog,
         schema=products_pa_table.schema,
     )

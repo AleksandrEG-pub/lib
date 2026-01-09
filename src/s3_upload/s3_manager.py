@@ -1,3 +1,4 @@
+import os
 import s3fs
 from dotenv import load_dotenv
 import pyarrow as pa
@@ -7,12 +8,17 @@ import pyarrow.parquet as pq
 class S3Manager:
 
     def __init__(self):
-        self.s3_endpoint = "http://localhost:10456"
-        self.bucket = "it-one-bucket"
+        load_dotenv('./s3.env')
+        self.endpoint=os.getenv('S3_ENDPOINT')
+        self.region=os.getenv('S3_REGION')
+        self.bucket=os.getenv('S3_BUCKET')
+        self.catalog=os.getenv('S3_CATALOG')
+        self.namespace=os.getenv('S3_NAMESPACE')
+        self.table=os.getenv('S3_TABLE')
         self.fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
             anon=True,
-            client_kwargs={'endpoint_url': self.s3_endpoint,
-                           'region_name': 'us-east-1'}
+            client_kwargs={'endpoint_url': self.endpoint,
+                           'region_name': self.region}
         )
         
     def init_bucket(self):
