@@ -11,7 +11,7 @@ def get_or_create_catalog_s3_sql(catalog_name: str, bucket: str):
         **{
             "type": "sql",
             "uri": database_url,
-            "warehouse": f"s3://{bucket}/icebearg_warehouse",
+            "warehouse": f"s3://{bucket}/iceberg_warehouse",
             "s3.endpoint": s3manager.endpoint,
             "s3.region": s3manager.region,
         }
