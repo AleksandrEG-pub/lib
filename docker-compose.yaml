@@ -7,8 +7,50 @@ services:
       - "10456:8333"
       - "10457:23646"
     command: "server -s3 -dir=/data"
+
+  spark-upload:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
     env_file:
-      - ./s3/.env
+      - path: ./env/database_docker.env
+        required: true
+      - path: ./env/spark.env
+        required: true
+      - path: ./env/s3_docker.env
+        required: true
+    environment:
+      - DEBUG=1 # set 1 to enable remote debug on 5678 port, 0 to disable
+    depends_on:
+      - spark-master
+      - spark-worker
+    ports:
+      - "5678:5678"
+
+  spark-master:
+    # 7077:7077 api
+    # 10458:8080 ui
+    image: spark-image
+    command: >
+      sh -c "
+        /opt/spark/sbin/start-master.sh;
+        tail -F /opt/spark/logs/spark-spark-org.apache.spark.deploy.master*.out
+      "
+    ports:
+      - "10458:8080"
+      
+  spark-worker:
+    image: spark-image
+    depends_on:
+      - spark-master
+    command: >
+      sh -c "
+        /opt/spark/sbin/start-worker.sh spark://spark-master:7077;
+        tail -F /opt/spark/logs/spark-spark-org.apache.spark.deploy.worker*.out
+      "
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=1G
 
   database-lib:
     image: postgres:17.5
@@ -16,13 +58,14 @@ services:
     ports:
       - "10452:5432"
     env_file:
-      - .env
+      - ./env/database.env
 
   clickhouse:
     image: clickhouse:25.11.3.54-jammy
     restart: unless-stopped
     env_file:
-      - ./src/clickhouse/clickhouse.env
+      - path: ./env/clickhouse.env
+        required: true
     ports:
       - "10453:8123"
       - "10454:9000"

@@ -36,14 +36,15 @@ def _load_products() -> pa.Table:
 def upload_products_from_sql_to_s3_as_parquet():
     pa_table: pa.Table = _load_products()
     file = 'products.parquet'
-    s3manager.write_as_parquet(s3manager.bucket, file, pa_table)
-    logging.info(f"product data written to file [{file}] in bucket [{s3manager.bucket}]")
+    s3manager.write_as_parquet(s3manager.s3_bucket, file, pa_table)
+    logging.info(
+        f"product data written to file [{file}] in bucket [{s3manager.s3_bucket}]")
 
 
 def upload_products_from_sql_to_iceberg():
     logging.info("getting catalog")
     catalog: Catalog = i_serv.get_or_create_catalog_s3_sql(
-        s3manager.catalog, s3manager.bucket)
+        s3manager.catalog, s3manager.s3_bucket)
     products_pa_table: pa.Table = _load_products()
     logging.info("getting table")
     iceberg_table: Table = i_serv.get_or_create_table(
@@ -54,4 +55,5 @@ def upload_products_from_sql_to_iceberg():
     )
     logging.info("adding data")
     iceberg_table.append(products_pa_table)
-    logging.info(f"product data written to iceberg catalog [{catalog.name}] in table [{iceberg_table.metadata.location}]")
+    logging.info(
+        f"product data written to iceberg catalog [{catalog.name}] in table [{iceberg_table.metadata.location}]")
