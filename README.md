@@ -184,3 +184,14 @@ Spark application:
 - renames columns accordning to sql scheme: ./src/spark_upload/init-tables.sql
 - add missing in init dataset column 'created_at'
 - append table in postgres with transformed data
+
+Result of uploading can be observed by:
+```
+docker compose exec database-lib bash
+psql --user it_one
+select * from products;
+```
+
+Spark is a solution for distributed processing. Especially effective on big datasets. Solves problem of case when data is bigger than available memory on simgle machine. Spark has built in fault taulerence, which will try to recover from failures of worker nodes.
+It would require big effort to achieve level of data processing management to implement similar to spark features in plain python. 
+However use of spark requires additional hardware resources, setup costs and knowledge of spark platform.
