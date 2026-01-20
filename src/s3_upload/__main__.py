@@ -12,7 +12,7 @@ def main():
     sql.init_database()
 
     logging.info("init s3 bucket")
-    s3manager.init_bucket()
+    s3manager.init_bucket(s3manager.s3_bucket)
 
     logging.info("uploading products to s3 as parquet")
     ps.upload_products_from_sql_to_s3_as_parquet()

@@ -1,4 +1,4 @@
-### Basic crud application for different types of storages and formats 
+### Basic crud application for different types of storages, formats, operations 
 
 Contains only scripts with manual launch. 
 No api exist.
@@ -35,6 +35,8 @@ Project split on modules:
   - clickhouse
 - week 6
   - s3_upload
+- week 7
+  - spark_upload
 
 Main execution scripts: 
 ```
@@ -44,6 +46,7 @@ python ./src/data_warehouse/data_vault/__main__.py
 python ./src/data_warehouse/partition/__main__.py
 python ./src/clickhouse/__main__.py
 python ./src/s3_upload/__main__.py
+python ./src/spark_upload/__main__.py
 ```
 
 ### Week 3. Data generation
@@ -134,3 +137,61 @@ s3_upload module does following:
 - load these products from postgres to s3 in bucket root as products.parquet
 - load same products from postgres to s3 in bucket as Iceberg structure under iceberg_warehouse dir
 - Result are described in ./src/s3/upload/results.txt
+
+### Spark, week 7
+
+Required ports:
+- 10452 - potgres
+- 10456 - s3
+- 10457 - s3 ui, launch script look in [S3, week 6]
+- 10458 - spark master ui, awailable by default
+
+Spark presented as cluster of master + worker.
+Cluster UI is available, on http://localhost:8080
+
+To work with s3 spark requires jars:
+- hadoop-aws-3.4.1.jar - api s3, used by spark
+- bundle-2.24.6.jar - aws sdk, imeplementation of api
+
+To connect to postgres spark requires sql Driver jar:
+- postgresql-42.7.9.jar
+
+Before start docker compose services, need to build spark image with extra jars:
+```
+./build_spark_image.sh
+```
+
+Then start required sevices:
+```
+./start-database.sh && ./start-s3.sh && ./start-spark.sh
+```
+
+Spark application executed in extra container:
+```
+./start-spark.app.sh
+```
+
+Spark configuration is in 
+```
+./env/spark.env
+```
+
+Spark application.
+Before spark application product data located in ./src/spark_upload/data/products.csv loaded to s3 bucket into 'products.parquet'
+
+Spark application:
+- loads 'products.parquet'
+- renames columns accordning to sql scheme: ./src/spark_upload/init-tables.sql
+- add missing in init dataset column 'created_at'
+- append table in postgres with transformed data
+
+Result of uploading can be observed by:
+```
+docker compose exec database-lib bash
+psql --user it_one
+select * from products;
+```
+
+Spark is a solution for distributed processing. Especially effective on big datasets. Solves problem of case when data is bigger than available memory on simgle machine. Spark has built in fault taulerence, which will try to recover from failures of worker nodes.
+It would require big effort to achieve level of data processing management to implement similar to spark features in plain python. 
+However use of spark requires additional hardware resources, setup costs and knowledge of spark platform.
