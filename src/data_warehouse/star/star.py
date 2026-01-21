@@ -150,7 +150,7 @@ def _load_sales_from_csv():
     columns = "(sale_id, customer_id, product_id, amount, quantity, date_value)"
     with db.cursor() as cursor:
         try:
-            with open(data_sales_file, 'r') as f:
+            with open(data_sales_file, 'r') as f:   
                 logging.info(
                     f"Inserting data from {data_sales_file} into {table_name}")
                 cursor.copy_expert(

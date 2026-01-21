@@ -22,10 +22,13 @@ create table if not exists product_dim (
 );
 
 create table if not exists sales_fact (
+    sale_hash varchar(255) unique,
     sale_id bigint,
     customer_sk bigint,
     product_sk bigint,
     quantity integer not null check (quantity >= 1),
     amount integer not null check (amount >= 1),
-    date_value timestamp with time zone not null
+    date_value timestamp with time zone not null,
+    FOREIGN KEY (customer_sk) REFERENCES customer_dim(customer_sk),
+    FOREIGN KEY (product_sk) REFERENCES product_dim(product_sk)
 );
