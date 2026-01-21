@@ -1,4 +1,4 @@
-### Basic crud Library application. 
+### Basic crud application for different types of storages and formats 
 
 Contains only scripts with manual launch. 
 No api exist.
@@ -33,6 +33,8 @@ Project split on modules:
   - partitions
 - week 5
   - clickhouse
+- week 6
+  - s3_upload
 
 Main execution scripts: 
 ```
@@ -41,9 +43,10 @@ python ./src/data_warehouse/star/__main__.py
 python ./src/data_warehouse/data_vault/__main__.py
 python ./src/data_warehouse/partition/__main__.py
 python ./src/clickhouse/__main__.py
+python ./src/s3_upload/__main__.py
 ```
 
-### Data generation
+### Week 3. Data generation
 
 > Modules generate data on start. 
 > 
@@ -111,3 +114,23 @@ Contains preconfigured dashboards:
 - web_logs: custom with basic info about web_logs table
 - ClickHouse - Data Analysis: default clickhouse configuration
 - ClickHouse - Query Analysis: default clickhouse configuration
+
+
+### S3, week 6
+
+S3 provider is seaweedfs. Started in docker with s3 API on http://seaweedfs:8333 or http://localhost:10456
+```
+./start-s3.sh
+```
+Admin ui can be started with command:
+```
+docker-compose exec -d seaweedfs /usr/bin/weed admin
+```
+Admin ui will be available on http://seaweedfs:23646 or http://localhost:10457
+
+s3_upload module does following:
+- creates products tables in postgres
+- populate few products
+- load these products from postgres to s3 in bucket root as products.parquet
+- load same products from postgres to s3 in bucket as Iceberg structure under iceberg_warehouse dir
+- Result are described in ./src/s3/upload/results.txt

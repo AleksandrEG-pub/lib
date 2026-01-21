@@ -1,0 +1,29 @@
+1. Product from SQL written to parquet file using pyarrow.parquet
+   Plain parquet file with products written in root of bucket. 
+   Result is single file with all data and metadata inside the file.
+
+it-one-bucket/
+│
+└── products.parquet
+
+2. Products from SQL is written to Iceberg table in S3 with SQL catalog in postgres
+   Results in few objects in s3 filesystem and 2 tables in postgres
+   Iceberg is system on top of parquet. Iceberg make storage based on immutable parquet files able to have changes using snapshots.
+   
+
+   S3:
+   it-one-bucket/
+   └── warehouse/                       ← where is catalog files located
+       └── main/                        ← namespace = "main"
+           └── products/                ← table = "products"
+               │
+               ├── data/
+               │   └── 00000-0-01b12c89-48de-47e3-8dd0-8a311f9bd7df.parquet                     ← actual table rows
+               └── metadata/
+                   ├── 00000-732e34b4-6b46-4dc6-add0-3d76210786e6.metadata.json                 ← table metadata v0 (table creation)
+                   │
+                   ├── 00001-342fce5b-0525-442e-b827-77bfcc795226.metadata.json                 ← table metadata v1 (after first write)
+                   │
+                   ├── snap-197102459681686733-0-01b12c89-48de-47e3-8dd0-8a311f9bd7df.avro      ← snapshot, points to manifest(s)
+                   │
+                   └── 01b12c89-48de-47e3-8dd0-8a311f9bd7df-m0.avro                             ← manifest, points to data files: .parquet

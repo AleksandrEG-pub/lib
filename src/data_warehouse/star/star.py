@@ -30,12 +30,6 @@ def setup_database() -> bool:
     
 
 def insert_products():
-    '''
-    Row wise insert each product from csv file.
-    Generates product_hash column to track duplicates.
-    Performs scd type 2.
-    Not thread safe.
-    '''
     df = pd.read_csv(data_products_file)
     update_scd = f"""
         update product_dim d
@@ -89,12 +83,6 @@ def insert_products():
     
     
 def insert_customers():
-    '''
-    Row wise insert each customer from csv file.
-    Generates product_hash column to track duplicates.
-    Performs scd type 2.
-    Not thread safe.
-    '''
     df = pd.read_csv(data_customers_file)
     update_scd = f"""
         update customer_dim cd
@@ -150,14 +138,6 @@ def insert_customers():
 
     
 def insert_sales():
-    '''
-    Performs batch insert of sales.
-    Loads a csv file to special sales_pre table.
-    Using single sql insert put data from sales_pre to sales_fact table connecting to 
-    product_dim and customer_dim tables.
-    After insert cleans all data from sales_pre table.
-    sales_pre is append only table, duplicates managed by sale_hash
-    '''
     try:
         _load_sales_from_csv()
         db_setup.execute_scripts(insert_to_star_sales)
