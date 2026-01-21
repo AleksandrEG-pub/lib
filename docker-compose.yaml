@@ -8,13 +8,26 @@ services:
       - "10452:5432"
     env_file:
       - .env
-    volumes:
-      # - it_one_db_data:/var/lib/postgresql/data
-      - ./postgres_config/postgresql.conf:/etc/postgresql/postgresql.conf
-    # command: >
-      # postgres -c config_file=/etc/postgresql/postgresql.conf
-    # command: >
-      # tail -f /dev/null
 
-# volumes:
-  # it_one_db_data:
+  clickhouse:
+    image: clickhouse:25.11.3.54-jammy
+    restart: unless-stopped
+    env_file:
+      - ./src/clickhouse/clickhouse.env
+    ports:
+      - "10453:8123"
+      - "10454:9000"
+
+  grafana:
+    image: grafana/grafana:12.3.0-18765596677-ubuntu
+    restart: unless-stopped
+    env_file:
+      - ./grafana/.env
+    ports:
+      - "10455:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/grafana.ini:/usr/local/etc/grafana/grafana.ini
+    depends_on:
+      - clickhouse

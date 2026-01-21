@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker compose --file ./docker-compose.yaml up -d
+docker compose --file ./docker-compose.yaml up -d database-lib
