@@ -37,6 +37,8 @@ Project split on modules:
   - s3_upload
 - week 7
   - spark_upload
+- week 8
+  - kafka
 
 Main execution scripts: 
 ```
@@ -47,6 +49,7 @@ python ./src/data_warehouse/partition/__main__.py
 python ./src/clickhouse/__main__.py
 python ./src/s3_upload/__main__.py
 python ./src/spark_upload/__main__.py
+python ./src/kafka/__main__.py
 ```
 
 ### Week 3. Data generation
@@ -195,3 +198,7 @@ select * from products;
 Spark is a solution for distributed processing. Especially effective on big datasets. Solves problem of case when data is bigger than available memory on simgle machine. Spark has built in fault taulerence, which will try to recover from failures of worker nodes.
 It would require big effort to achieve level of data processing management to implement similar to spark features in plain python. 
 However use of spark requires additional hardware resources, setup costs and knowledge of spark platform.
+
+
+### Kafka, week 8
+

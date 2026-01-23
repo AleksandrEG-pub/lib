@@ -34,6 +34,7 @@ partitions = "data_warehouse.partitions:main"
 clickhouse = "clickhouse:main"
 s3 = "s3_upload:main"
 spark = "spark_upload:main"
+kafka = "kafka:main"
 
 [tool.setuptools]
 package-dir={"" = "src"}
