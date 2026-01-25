@@ -1,0 +1,28 @@
+FROM spark:4.0.1-python3 AS spark_s3
+RUN curl -L -o /opt/spark/jars/hadoop-aws-3.4.1.jar \
+        https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar && \
+    curl -L -o /opt/spark/jars/bundle-2.24.6.jar \
+        https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.24.6/bundle-2.24.6.jar && \
+    curl -L -o /opt/spark/jars/postgresql-42.7.9.jar \
+        https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.9/postgresql-42.7.9.jar
+USER root
+RUN apt update && apt install -y python3.10-venv
+USER spark
+RUN python3 -m venv /opt/spark/venv/spark-venv
+ENV VIRTUAL_ENV="/opt/spark/venv/spark-venv"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+FROM spark_s3 AS py_spark_app
+RUN pip install pyspark==4.0.1
+RUN pip install debugpy==1.8.19
+RUN mkdir -p /opt/spark/app/src
+RUN mkdir -p /opt/spark/app/.pip_cache
+ENV PIP_CACHE_DIR=/opt/spark/app/.pip_cache
+WORKDIR /opt/spark/app
+COPY --chown=spark:spark pyproject.toml README.md ./
+RUN pip install -e .
+COPY --chown=spark:spark entrypoint.sh .
+COPY --chown=spark:spark src/ ./src/
+ENTRYPOINT ["./entrypoint.sh"]
+# ENTRYPOINT ["tail", "-f", "/dev/null"]
+
