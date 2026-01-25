@@ -3,24 +3,27 @@ name: it_one
 services:
   kafka:
     image: apache/kafka:3.7.0
-    ports:
-      - "9092:9092"
+    env_file:
+      - path: ./env/kafka_broker.env
+        required: true
+
+  kafka-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: kafka_pipeline
     environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
-      KAFKA_LISTENERS: 'CONTROLLER://:9093,PLAINTEXT://:9092'
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      CLUSTER_ID: 'it_one'
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      - DEBUG=0 # set 1 to enable remote debug on 5678 port, 0 to disable
+      # - DEBUG=1 # set 1 to enable remote debug on 5678 port, 0 to disable
+    ports:
+      - "5678:5678"
+    env_file:
+      - path: ./env/kafka.env
+        required: true
+      - path: ./env/spark.env
+        required: true
+      - path: ./env/database_docker.env
+        required: true
 
   seaweedfs:
     image: chrislusf/seaweedfs:4.04
@@ -33,7 +36,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.spark_app
-      target: py_spark_app
+      target: spark_upload
     env_file:
       - path: ./env/database_docker.env
         required: true
@@ -52,7 +55,7 @@ services:
   spark-master:
     # 7077:7077 api
     # 10458:8080 ui
-    build:
+    build:  
       context: .
       dockerfile: Dockerfile.spark_app
       target: spark_s3

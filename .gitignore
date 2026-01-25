@@ -8,3 +8,4 @@ local
 *$py.class
 *.egg-info/
 .idea
+.Trash*

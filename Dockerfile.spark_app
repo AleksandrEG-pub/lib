@@ -21,8 +21,15 @@ ENV PIP_CACHE_DIR=/opt/spark/app/.pip_cache
 WORKDIR /opt/spark/app
 COPY --chown=spark:spark pyproject.toml README.md ./
 RUN pip install -e .
-COPY --chown=spark:spark entrypoint.sh .
+COPY --chown=spark:spark entrypoint_kafka_pipeline.sh .
+COPY --chown=spark:spark entrypoint_spark_upload.sh .
 COPY --chown=spark:spark src/ ./src/
-ENTRYPOINT ["./entrypoint.sh"]
+COPY --chown=spark:spark env/ ./env/
+
+FROM py_spark_app AS spark_upload
+ENTRYPOINT ["./entrypoint_spark_upload.sh"]
 # ENTRYPOINT ["tail", "-f", "/dev/null"]
 
+FROM py_spark_app AS kafka_pipeline
+ENTRYPOINT ["./entrypoint_kafka_pipeline.sh"]
+# ENTRYPOINT ["tail", "-f", "/dev/null"]
