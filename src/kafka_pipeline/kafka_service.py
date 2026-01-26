@@ -11,9 +11,9 @@ class KafkaService:
             # batch_size=10,
             # key_serializer=str.encode,
             value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8"),
-            request_timeout_ms=5000,
-            metadata_max_age_ms=5000,
-            api_version_auto_timeout_ms=5000,
+            # request_timeout_ms=5000,
+            # metadata_max_age_ms=5000,
+            # api_version_auto_timeout_ms=5000,
         )
 
     def send_to_server(self, record):
@@ -22,7 +22,7 @@ class KafkaService:
         # producer.begin_transaction()
         # logging.info(f"sending to topic {topic} row [{record}] ")
         future = self.producer.send(topic, value=record)
-        # future.get()
+        future.get()
         # future.get() # wait for successful produce
         # producer.commit_transaction() # commit the transaction
 

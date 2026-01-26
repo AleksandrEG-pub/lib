@@ -7,7 +7,7 @@ services:
       - path: ./env/kafka_broker.env
         required: true
 
-  kafka-app:
+  kafka-pipeline:
     build:
       context: .
       dockerfile: Dockerfile.spark_app
@@ -58,7 +58,7 @@ services:
     build:  
       context: .
       dockerfile: Dockerfile.spark_app
-      target: spark_s3
+      target: spark_base
     command: >
       sh -c "
         /opt/spark/sbin/start-master.sh;
@@ -71,7 +71,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.spark_app
-      target: spark_s3
+      target: spark_base
     depends_on:
       - spark-master
     command: >

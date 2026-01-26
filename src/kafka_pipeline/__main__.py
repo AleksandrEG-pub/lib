@@ -20,7 +20,7 @@ def main():
     sql_service.init_sql()
     data_service.init_data()
     data_service.upload_from_database_to_kafka()
-    # data_service.sink_from_kafka_to_database()
+    data_service.sink_from_kafka_to_database()
 
 if __name__ == '__main__':
     main()
