@@ -1,8 +1,7 @@
 from importlib.resources import files
+import json
 import logging
 import os
-import csv
-import io
 from typing import Any
 import pandas as pd
 from sqlalchemy import Tuple
@@ -11,8 +10,8 @@ import database.database_connection as dc
 import kafka_pipeline.kafka_service as ks
 from kafka_pipeline.spark_service import spark_service
 from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.functions import col, split, to_timestamp_ltz, lit, trim, regexp_replace, from_csv
-from pyspark.sql.types import StringType, DateType, IntegerType, TimestampType, StructField, LongType, StructType
+import pyspark.sql.functions as sf
+import pyspark.sql.types as st
 
 
 def init_data():
@@ -33,17 +32,14 @@ def upload_from_database_to_kafka():
     logging.info("uploading data from postgres to kafka")
     with dc.db.cursor() as cursor:
         cursor.execute("SELECT * FROM flights")
-        rows: list[Tuple[Any, ...]] = cursor.fetchall()
-        if rows:
-            logging.info(f"table has {len(rows)} flights")
-            for row in rows:
-                logging.info(row)
-                output = io.StringIO()
-                writer = csv.writer(output)
-                writer.writerow(row)
-                csv_string = output.getvalue().strip()  # you already do this
-                csv_string = csv_string.strip('"')      # extra safety
-                ks.kafka_service.send_to_server(csv_string.encode('utf-8'))
+        columns = [c[0] for c in cursor.description]
+        for row in cursor.fetchall():
+            message = {
+                "schema": "flight.v1",
+                "data": dict(zip(columns, row))
+            }
+            json_message = json.dumps(message, default=str)
+            ks.kafka_service.send_to_server(json_message.encode("utf-8"))
     logging.info("uploaded data from postgres to kafka")
 
 
@@ -55,91 +51,14 @@ def sink_from_kafka_to_database():
                      .option("subscribe", "it-one")
                      .option("startingOffsets", "earliest")
                      .load()
+                     .select(sf.col('value'))
+                     .withColumn("value", sf.col("value").cast(st.StringType()))
+                     .withColumn('value', sf.from_json(sf.col("value"), schemes.kafka_message_type))
+                     .select("value.*", "*")
+                     .select("data")
+                     .select("data.*", "*")
+                     .select(*(schemes.flights_upload_properties))
                      )
-    values = df.selectExpr("CAST(value AS STRING)")
-    df = df.withColumn("key", col("key").cast(StringType()))
-    df = df.withColumn("value", col("value").cast(StringType()))
-    df = df.select('value')
-    df = df.withColumn(
-        "value",
-        regexp_replace(col("value"), r'^[\[\(]|[\]\)]$', '')
-    )
-    schema = StructType([
-        StructField("flight_id", LongType()),
-        StructField("airline", StringType()),
-        StructField("flight_number", StringType()),
-        StructField("origin", StringType()),
-        StructField("destination", StringType()),
-        StructField("departure_time", StringType()),   # parse later
-        StructField("arrival_time", StringType()),     # parse later
-        StructField("duration_minutes", IntegerType()),
-        StructField("aircraft_type", StringType()),
-        StructField("status", StringType()),
-        StructField("economy_seats", IntegerType()),
-        StructField("business_seats", IntegerType()),
-        StructField("first_class_seats", IntegerType()),
-        StructField("booked_economy", IntegerType()),
-        StructField("booked_business", IntegerType()),
-        StructField("booked_first_class", IntegerType()),
-    ])
-    props = [
-        'flight_id',
-        'airline',
-        'flight_number',
-        'origin',
-        'destination',
-        'departure_time',
-        'arrival_time',
-        'duration_minutes',
-        'aircraft_type',
-        'status',
-        'economy_seats',
-        'business_seats',
-        'first_class_seats',
-        'booked_economy',
-        'booked_business',
-        'booked_first_class',
-    ]
-    schema_ddl = ",".join(
-        f"{f.name} {f.dataType.simpleString().upper()}"
-        for f in schema.fields
-    )
-    csv_options = {
-        "sep": ",",
-        "quote": '"',
-        "ignoreLeadingWhiteSpace": "true",
-        "ignoreTrailingWhiteSpace": "true"
-    }
-    df = df.select(
-        from_csv(col("value"), schema_ddl, csv_options).alias("row")
-    ).select("row.*")
-    for i, column in enumerate(props):
-        df = df.withColumn(column, trim(col(column)))
-        df = df.withColumn(column, trim(regexp_replace(col(column), r'\]\["', '')))
-        # col_type = column_to_type[1]
-        # df = df.withColumn(col_name, col(col_name).try_cast(col_type))
-    df = df.withColumn('flight_id', col('flight_id').cast(LongType()))
-    df = df.withColumn('duration_minutes', col('duration_minutes').cast(IntegerType()))
-    for time_col_name in ['departure_time', 'arrival_time']:
-        df = df.withColumn(time_col_name,
-                           to_timestamp_ltz(
-                               trim(regexp_replace(
-                                   col(time_col_name), r'"', '')),
-                               lit("yyyy-MM-dd HH:mm:ssXXX")
-                           ))
-    to_remove = [
-        'value',
-        'economy_seats',
-        'business_seats',
-        'first_class_seats',
-        'booked_economy',
-        'booked_business',
-        'booked_first_class',
-    ]
-
-    df = df.drop(*to_remove)
-    df = df.na.drop()
-
     def write_to_sql(batch_df, batch_id):
         try:
             batch_df.write.jdbc(
@@ -156,21 +75,46 @@ def sink_from_kafka_to_database():
         except Exception as e:
             print(f"Error in batch {batch_id}: {e}")
             raise
-
     df.writeStream.foreachBatch(write_to_sql).start().awaitTermination()
 
-# airline            VARCHAR
-# flight_number      VARCHAR
-# origin             VARCHAR
-# destination        VARCHAR
-# departure_time     timestamp
-# arrival_time       timestamp
-# duration_minutes   INTEGER
-# aircraft_type      VARCHAR
-# status             VARCHAR
-# economy_seats      INTEGER
-# business_seats     INTEGER
-# first_class_seats  INTEGER
-# booked_economy     INTEGER
-# booked_business    INTEGER
-# booked_first_class INTEGER
+
+class KafkaScheme():
+    def __init__(self):
+        data_type = st.StructType([
+            st.StructField("flight_id", st.LongType()),
+            st.StructField("airline", st.StringType()),
+            st.StructField("flight_number", st.StringType()),
+            st.StructField("origin", st.StringType()),
+            st.StructField("destination", st.StringType()),
+            st.StructField("departure_time", st.TimestampType()),
+            st.StructField("arrival_time", st.TimestampType()),
+            st.StructField("duration_minutes", st.IntegerType()),
+            st.StructField("aircraft_type", st.StringType()),
+            st.StructField("status", st.StringType()),
+            st.StructField("economy_seats", st.IntegerType()),
+            st.StructField("business_seats", st.IntegerType()),
+            st.StructField("first_class_seats", st.IntegerType()),
+            st.StructField("booked_economy", st.IntegerType()),
+            st.StructField("booked_business", st.IntegerType()),
+            st.StructField("booked_first_class", st.IntegerType()),
+        ])
+        self.kafka_message_type = st.StructType([
+            st.StructField("schema", st.StringType()),
+            st.StructField("data", data_type)
+        ])
+
+        self.flights_upload_properties = [
+            'flight_id',
+            'airline',
+            'flight_number',
+            'origin',
+            'destination',
+            'departure_time',
+            'arrival_time',
+            'duration_minutes',
+            'aircraft_type',
+            'status',
+        ]
+
+
+schemes = KafkaScheme()

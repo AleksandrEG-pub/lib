@@ -12,8 +12,8 @@ services:
       context: .
       dockerfile: Dockerfile.spark_app
       target: kafka_pipeline
-    environment:
-      - DEBUG=0 # set 1 to enable remote debug on 5678 port, 0 to disable
+    # environment:
+      # - DEBUG=0 # set 1 to enable remote debug on 5678 port, 0 to disable
       # - DEBUG=1 # set 1 to enable remote debug on 5678 port, 0 to disable
     ports:
       - "5678:5678"
@@ -44,8 +44,8 @@ services:
         required: true
       - path: ./env/s3_docker.env
         required: true
-    environment:
-      - DEBUG=0 # set 1 to enable remote debug on 5678 port, 0 to disable
+    # environment:
+      # - DEBUG=0 # set 1 to enable remote debug on 5678 port, 0 to disable
     depends_on:
       - spark-master
       - spark-worker

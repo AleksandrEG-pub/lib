@@ -10,7 +10,7 @@ class KafkaService:
             # enable_idempotence=True,
             # batch_size=10,
             # key_serializer=str.encode,
-            value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8"),
+            # value_serializer=lambda v: v.encode("utf-8"),
             # request_timeout_ms=5000,
             # metadata_max_age_ms=5000,
             # api_version_auto_timeout_ms=5000,

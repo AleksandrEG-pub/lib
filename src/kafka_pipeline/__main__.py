@@ -4,7 +4,7 @@ from pathlib import Path
 import kafka_pipeline.data_service as data_service
 import kafka_pipeline.sql_service as sql_service
 
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 env_path = Path(__file__).resolve().parents[2] / "env"
 required_envs = [
     'database_docker.env',

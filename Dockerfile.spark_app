@@ -1,4 +1,4 @@
-FROM maven:3.9.12-eclipse-temurin-25-noble as maven_jars
+FROM maven:3.9.12-eclipse-temurin-25-noble AS maven_jars
 WORKDIR /build
 COPY pom.xml .
 RUN mvn -B dependency:copy-dependencies \
