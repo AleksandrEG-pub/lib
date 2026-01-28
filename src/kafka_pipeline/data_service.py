@@ -12,75 +12,12 @@ from kafka_pipeline.spark_service import spark_service
 from pyspark.sql.dataframe import DataFrame
 import pyspark.sql.functions as sf
 import pyspark.sql.types as st
+from pyspark.sql.functions import struct as s_struct
 
 
-def init_data():
-    logging.info("initializing data from csv")
-    with dc.db.cursor() as cursor:
-        cursor.execute("SELECT * FROM flights")
-        rows: list[Tuple[Any, ...]] = cursor.fetchall()
-        if rows:
-            logging.info("data already exist. no csv upload.")
-            return
-    csv_path = files("kafka_pipeline").joinpath("data/flights.csv")
-    df: pd.DataFrame = pd.read_csv(csv_path)
-    dc.db.df_to_sql(table='flights', df=df)
-    logging.info("uploaded data from csv to table 'flights'")
-
-
-def upload_from_database_to_kafka():
-    logging.info("uploading data from postgres to kafka")
-    with dc.db.cursor() as cursor:
-        cursor.execute("SELECT * FROM flights")
-        columns = [c[0] for c in cursor.description]
-        for row in cursor.fetchall():
-            message = {
-                "schema": "flight.v1",
-                "data": dict(zip(columns, row))
-            }
-            json_message = json.dumps(message, default=str)
-            ks.kafka_service.send_to_server(json_message.encode("utf-8"))
-    logging.info("uploaded data from postgres to kafka")
-
-
-def sink_from_kafka_to_database():
-    spark: SparkSession = spark_service.spark
-    df: DataFrame = (spark.readStream
-                     .format("kafka")
-                     .option("kafka.bootstrap.servers", os.getenv('BOOTSTRAP_SERVER'))
-                     .option("subscribe", "it-one")
-                     .option("startingOffsets", "earliest")
-                     .load()
-                     .select(sf.col('value'))
-                     .withColumn("value", sf.col("value").cast(st.StringType()))
-                     .withColumn('value', sf.from_json(sf.col("value"), schemes.kafka_message_type))
-                     .select("value.*", "*")
-                     .select("data")
-                     .select("data.*", "*")
-                     .select(*(schemes.flights_upload_properties))
-                     )
-    def write_to_sql(batch_df, batch_id):
-        try:
-            batch_df.write.jdbc(
-                url=f"jdbc:postgresql://{dc.db.config['host']}:{dc.db.config['port']}/{dc.db.config['dbname']}",
-                table='flights_upload',
-                mode='append',
-                properties={
-                    'user': os.getenv('POSTGRES_USER'),
-                    'password': os.getenv('POSTGRES_PASSWORD'),
-                    'batchsize': '25'
-                }
-            )
-            print(f"Batch {batch_id} written successfully")
-        except Exception as e:
-            print(f"Error in batch {batch_id}: {e}")
-            raise
-    df.writeStream.foreachBatch(write_to_sql).start().awaitTermination()
-
-
-class KafkaScheme():
+class Schemes():
     def __init__(self):
-        data_type = st.StructType([
+        flights_data_type = st.StructType([
             st.StructField("flight_id", st.LongType()),
             st.StructField("airline", st.StringType()),
             st.StructField("flight_number", st.StringType()),
@@ -100,9 +37,12 @@ class KafkaScheme():
         ])
         self.kafka_message_type = st.StructType([
             st.StructField("schema", st.StringType()),
-            st.StructField("data", data_type)
+            st.StructField("data", flights_data_type)
         ])
-
+        self.json_parse_type = st.StructType([
+            st.StructField("parsed", st.StringType()),
+            st.StructField("error", st.StringType())
+        ])
         self.flights_upload_properties = [
             'flight_id',
             'airline',
@@ -117,4 +57,111 @@ class KafkaScheme():
         ]
 
 
-schemes = KafkaScheme()
+schemes = Schemes()
+
+
+def init_data():
+    logging.info("initializing data from csv")
+    with dc.db.cursor() as cursor:
+        cursor.execute("SELECT * FROM flights")
+        rows: list[Tuple[Any, ...]] = cursor.fetchall()
+        if rows:
+            logging.info("data already exist. no csv upload.")
+            return
+    csv_path = files("kafka_pipeline").joinpath("data/flights.csv")
+    df: pd.DataFrame = pd.read_csv(csv_path)
+    dc.db.df_to_sql(table='flights', df=df)
+    logging.info("uploaded data from csv to table 'flights'")
+
+
+def upload_from_database_to_kafka():
+    logging.info("uploading data from postgres to kafka")
+    send_futures = []
+    with dc.db.cursor() as cursor:
+        cursor.execute("SELECT * FROM flights")
+        columns = [c[0] for c in cursor.description]
+        for row in cursor.fetchall():
+            message = {
+                "schema": "flight.v1",
+                "data": dict(zip(columns, row))
+            }
+            json_message = json.dumps(message, default=str)
+            future = ks.kafka_service.send_to_server(
+                json_message.encode("utf-8"))
+            send_futures.append(future)
+    timeout_seconds = 30
+    for future in send_futures:
+        try:
+            future.get(timeout=timeout_seconds)
+        except Exception as e:
+            logging.error(f"Failed to send message: {e}")
+    logging.info("uploaded data from postgres to kafka")
+
+
+@sf.udf(returnType=schemes.json_parse_type)
+def parse_json(kafka_message):
+    json_binary = kafka_message['value']
+    message_payload_str = json_binary.decode("utf-8")
+    try:
+        message_payload_json = json.loads(message_payload_str)
+        if message_payload_json.get('schema') == 'flight.v1' and str(message_payload_json['data']['flight_number']).find("A") > 0:
+            return (message_payload_str, None)
+        else:
+            return (None, f"unexpected version: {message_payload_json['schema']}. Expected: [flight.v1]")
+    except Exception as e:
+        return (None, f"error processing: {str(e)}")
+
+
+def _write_to_sql(batch_df, batch_id):
+    try:
+        batch_df.write.jdbc(
+            url=f"jdbc:postgresql://{dc.db.config['host']}:{dc.db.config['port']}/{dc.db.config['dbname']}",
+            table='flights_upload',
+            mode='append',
+            properties={
+                'user': os.getenv('POSTGRES_USER'),
+                'password': os.getenv('POSTGRES_PASSWORD'),
+                'batchsize': '25'
+            }
+        )
+        logging.info(f"Batch {batch_id} written successfully")
+    except Exception as e:
+        logging.info(f"Error in batch {batch_id}: {e}")
+        raise
+
+
+def sink_from_kafka_to_database():
+    logging.info("sink data from topic 'it-one' to 'flights_upload' table")
+    spark: SparkSession = spark_service.spark
+    df: DataFrame = (spark.readStream
+                     .format("kafka")
+                     .option("kafka.bootstrap.servers", os.getenv('BOOTSTRAP_SERVER'))
+                     .option("subscribe", "it-one")
+                     .option("startingOffsets", "earliest")
+                     .load()
+                     .withColumn('original_message', s_struct('*'))
+                     .select('original_message')
+                     .withColumn("json_parse_result", parse_json(s_struct('original_message.*')))
+                     )
+    df_messages = (df.filter(sf.col('json_parse_result.parsed').isNotNull())
+                   .withColumn('kafka_message',
+                               sf.from_json(sf.col('json_parse_result.parsed'), schema=schemes.kafka_message_type))
+                   .select("kafka_message.data.*").alias('flight_data')
+                   .select(*(schemes.flights_upload_properties)))
+
+    df_messages.writeStream.foreachBatch(_write_to_sql).start()
+    logging.info("finished upload to 'flights_upload' table")
+
+    df_error = (df.filter(sf.col('json_parse_result.error').isNotNull())
+                .withColumn('reason_in_dlq', sf.col('json_parse_result.error'))
+                .select(sf.to_json(sf.struct("original_message", "reason_in_dlq")).alias('value'))
+                )
+    (df_error.writeStream
+     .format("kafka")
+     .option("kafka.bootstrap.servers", os.getenv('BOOTSTRAP_SERVER'))
+     .option("topic", "it-one.dlq")
+     .option("checkpointLocation", "/tmp/checkpoint/it-one-dlq")
+     .start()
+     .awaitTermination(timeout=30)
+     )
+    logging.info("finished sending messages to dlq")
