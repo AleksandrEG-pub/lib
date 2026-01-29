@@ -2,8 +2,7 @@ import logging
 import os
 import psycopg2
 from contextlib import contextmanager
-from sqlalchemy import create_engine
-from sqlalchemy import Engine
+from sqlalchemy import create_engine, Engine
 import pandas as pd
 
 
@@ -13,16 +12,24 @@ class Database:
     def __init__(self):
         self._config = None
         self._engine: Engine = None
+        
+    def get_valid_property(self, property_name):
+        prop_value = os.getenv(property_name)
+        if prop_value:
+            return prop_value
+        else:
+            raise Exception(f"property {property_name} can not be empty")
 
     @property
     def config(self):
         """Lazy-loaded configuration property"""
         if self._config is None:
-            dbname = os.getenv('POSTGRES_DB')
-            user = os.getenv('POSTGRES_USER')
-            password = os.getenv('POSTGRES_PASSWORD')
-            host = os.getenv('DB_HOST')
-            port = os.getenv('DB_PORT')
+            dbname = self.get_valid_property('POSTGRES_DB')
+            user = self.get_valid_property('POSTGRES_USER')
+            password = self.get_valid_property('POSTGRES_PASSWORD')
+            host = self.get_valid_property('DB_HOST')
+            port = self.get_valid_property('DB_PORT')
+            
             connection_url = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
             self._config = {
                 'dbname': dbname,
@@ -75,7 +82,7 @@ class Database:
     @contextmanager
     def sqla_connection(self):
         with self._engine.begin() as conn:
-                yield conn
+            yield conn
     
             
     def sql_to_df(self, query: str, params: dict = {}):

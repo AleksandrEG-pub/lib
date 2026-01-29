@@ -1,6 +1,27 @@
 name: it_one
 
 services:
+  kafka:
+    image: apache/kafka:3.7.0
+    env_file:
+      - path: ./env/kafka_broker.env
+        required: true
+
+  kafka-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: kafka_pipeline
+    ports:
+      - "5678:5678"
+    env_file:
+      - path: ./env/kafka.env
+        required: true
+      - path: ./env/spark.env
+        required: true
+      - path: ./env/database_docker.env
+        required: true
+
   seaweedfs:
     image: chrislusf/seaweedfs:4.04
     ports:
@@ -11,7 +32,8 @@ services:
   spark-upload:
     build:
       context: .
-      dockerfile: Dockerfile.app
+      dockerfile: Dockerfile.spark_app
+      target: spark_upload
     env_file:
       - path: ./env/database_docker.env
         required: true
@@ -19,8 +41,6 @@ services:
         required: true
       - path: ./env/s3_docker.env
         required: true
-    environment:
-      - DEBUG=0 # set 1 to enable remote debug on 5678 port, 0 to disable
     depends_on:
       - spark-master
       - spark-worker
@@ -30,7 +50,10 @@ services:
   spark-master:
     # 7077:7077 api
     # 10458:8080 ui
-    image: spark-image
+    build:  
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: spark_base
     command: >
       sh -c "
         /opt/spark/sbin/start-master.sh;
@@ -40,7 +63,10 @@ services:
       - "10458:8080"
       
   spark-worker:
-    image: spark-image
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: spark_base
     depends_on:
       - spark-master
     command: >
