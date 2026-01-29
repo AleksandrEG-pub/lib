@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=64.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "data_migrations"
 version = "0.0.1"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "psycopg2-binary==2.9.11",
     "pandas==2.3.3",
@@ -22,7 +22,8 @@ dependencies = [
     "s3fs==2025.12.0",
     "adbc-driver-manager==1.9.0",
     "adbc-driver-postgresql==1.9.0",
-    "pyiceberg[sql-sqlite]==0.10.0"
+    "pyiceberg[sql-sqlite]==0.10.0",
+    "pyspark==4.0.1",
 ]
 
 [project.scripts]
@@ -32,6 +33,14 @@ data_vault = "data_warehouse.data_vault:main"
 partitions = "data_warehouse.partitions:main"
 clickhouse = "clickhouse:main"
 s3 = "s3_upload:main"
+spark = "spark_upload:main"
+
+[tool.setuptools]
+package-dir={"" = "src"}
+
+[tool.setuptools.package-data]
+spark_upload = ["sql/*.sql", "data/*"]
+s3_upload = ["sql/*.sql"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
