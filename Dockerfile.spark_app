@@ -22,7 +22,7 @@ RUN mkdir -p /opt/spark/app/.ivy2
 ENV PIP_CACHE_DIR=/opt/spark/app/.pip_cache
 ENV IVY_HOME=/opt/spark/app/.ivy2
 WORKDIR /opt/spark/app
-COPY --chown=spark:spark pyproject.toml README.md ./
+COPY --chown=spark:spark pyproject.toml ./
 RUN pip install -e .
 COPY --chown=spark:spark src/ ./src/
 COPY --chown=spark:spark env/ ./env/

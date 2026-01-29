@@ -16,6 +16,11 @@ from pyspark.sql.functions import struct as s_struct
 
 
 class Schemes():
+    '''
+    Contains schemas for integrations with sql, spark and kafka 
+    - kafka_message_type - structure of kafka message in spark types
+    -flights_upload_properties - which columns contain 'flight-upload' table
+    '''
     def __init__(self):
         flights_data_type = st.StructType([
             st.StructField("flight_id", st.LongType()),
@@ -55,12 +60,13 @@ class Schemes():
             'aircraft_type',
             'status',
         ]
-
-
 schemes = Schemes()
 
 
 def init_data():
+    '''
+    upload data to 'flight' table from ./data/flights.csv file
+    '''
     logging.info("initializing data from csv")
     with dc.db.cursor() as cursor:
         cursor.execute("SELECT * FROM flights")
@@ -75,6 +81,13 @@ def init_data():
 
 
 def upload_from_database_to_kafka():
+    '''
+    Upload data from 'flights' table to kafka 'it-one' topic using database cursor.
+    Each row converted to json.
+    
+    Use on big data with caution, because it collects send task's futures, which can
+    take significant memory if tables are big 
+    '''
     logging.info("uploading data from postgres to kafka")
     send_futures = []
     with dc.db.cursor() as cursor:
@@ -99,12 +112,18 @@ def upload_from_database_to_kafka():
 
 
 @sf.udf(returnType=schemes.json_parse_type)
-def parse_json(kafka_message):
+def _parse_json(kafka_message):
+    '''
+    Decodes kafka message
+    Check if message has json structure
+    Check if message has correct schema version
+    '''
     json_binary = kafka_message['value']
     message_payload_str = json_binary.decode("utf-8")
     try:
         message_payload_json = json.loads(message_payload_str)
-        if message_payload_json.get('schema') == 'flight.v1' and str(message_payload_json['data']['flight_number']).find("A") > 0:
+        immitate_wrong_version = str(message_payload_json['data']['flight_number']).find("A") > 0
+        if message_payload_json.get('schema') == 'flight.v1' and immitate_wrong_version:
             return (message_payload_str, None)
         else:
             return (None, f"unexpected version: {message_payload_json['schema']}. Expected: [flight.v1]")
@@ -113,6 +132,9 @@ def parse_json(kafka_message):
 
 
 def _write_to_sql(batch_df, batch_id):
+    '''
+    Writes spark microbatches to postgres table 'flights_upload'
+    '''
     try:
         batch_df.write.jdbc(
             url=f"jdbc:postgresql://{dc.db.config['host']}:{dc.db.config['port']}/{dc.db.config['dbname']}",
@@ -141,14 +163,13 @@ def sink_from_kafka_to_database():
                      .load()
                      .withColumn('original_message', s_struct('*'))
                      .select('original_message')
-                     .withColumn("json_parse_result", parse_json(s_struct('original_message.*')))
+                     .withColumn("json_parse_result", _parse_json(s_struct('original_message.*')))
                      )
     df_messages = (df.filter(sf.col('json_parse_result.parsed').isNotNull())
                    .withColumn('kafka_message',
                                sf.from_json(sf.col('json_parse_result.parsed'), schema=schemes.kafka_message_type))
                    .select("kafka_message.data.*").alias('flight_data')
                    .select(*(schemes.flights_upload_properties)))
-
     df_messages.writeStream.foreachBatch(_write_to_sql).start()
     logging.info("finished upload to 'flights_upload' table")
 

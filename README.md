@@ -201,4 +201,47 @@ However use of spark requires additional hardware resources, setup costs and kno
 
 
 ### Kafka, week 8
+Required ports:
+- 10452 - potgres
+- 10458 - spark master ui, awailable by default
 
+Kafka presented as single node cluster.
+
+Start required sevices:
+```
+./start-database.sh && ./start-spark.sh && ./start-kafka.sh
+```
+
+Spark application executed in extra container:
+```
+./start-kafka-pipeline-app.sh
+```
+
+Kafka configuration is in 
+```
+./env/kafka.env
+./env/kafka_broker.env
+```
+
+For convinience, topic created automatically, ttl set to 5 minutes
+
+Module executes as a spark application in spark container.
+Kafka-pipeline application:
+- creates tables from ./sql/init-tables.sql in postgres: 'flights', 'flights_upload'
+- populates table flight from data in ./data/flights.csv
+- python-kafka move data from table 'flights' to kafka topic 'it-one'
+- spark application moves data from topic 'it-one' to table 'flights_upload'
+- failed messages written to dead letter queue 'it-one.dlq'
+
+Result of uploading can be observed by:
+```
+# postgres
+docker compose exec database-lib bash
+psql --user it_one
+select * from flights;
+select * from flights_upload;
+
+# kafka
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one --group console --from-beginning
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.dlq --group console --from-beginning
+```

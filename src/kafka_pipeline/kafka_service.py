@@ -1,5 +1,4 @@
 import os
-import logging
 from kafka import KafkaProducer
 
 class KafkaService:
@@ -14,6 +13,5 @@ class KafkaService:
     def send_to_server(self, record, key=None):
         topic = 'it-one'
         return self.producer.send(topic, value=record, key=key)
-
 
 kafka_service = KafkaService()
