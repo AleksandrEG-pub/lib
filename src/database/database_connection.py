@@ -1,7 +1,7 @@
+import logging
 import os
 import psycopg2
 from contextlib import contextmanager
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy import Engine
 import pandas as pd
@@ -14,17 +14,16 @@ class Database:
         self._config = None
         self._engine: Engine = None
 
-
     @property
     def config(self):
         """Lazy-loaded configuration property"""
         if self._config is None:
-            load_dotenv()
             dbname = os.getenv('POSTGRES_DB')
             user = os.getenv('POSTGRES_USER')
             password = os.getenv('POSTGRES_PASSWORD')
             host = os.getenv('DB_HOST')
             port = os.getenv('DB_PORT')
+            connection_url = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
             self._config = {
                 'dbname': dbname,
                 'user': user,
@@ -32,8 +31,9 @@ class Database:
                 'host': host,
                 'port': port,
             }
-            connection_string = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
-            self._engine = create_engine(connection_string)
+            self.connection_url = connection_url
+            logging.info(f"database url {connection_url}")
+            self._engine = create_engine(connection_url)
         return self._config
 
 
