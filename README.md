@@ -38,7 +38,9 @@ Project split on modules:
 - week 7
   - spark_upload
 - week 8
-  - kafka
+  - kafka_pipeline
+- week 9
+  - airflow_pipeline
 
 Main execution scripts: 
 ```
@@ -49,7 +51,8 @@ python ./src/data_warehouse/partition/__main__.py
 python ./src/clickhouse/__main__.py
 python ./src/s3_upload/__main__.py
 python ./src/spark_upload/__main__.py
-python ./src/kafka/__main__.py
+python ./src/kafka_pipeline/__main__.py
+python ./src/airflow_pipeline/__main__.py
 ```
 
 ### Week 3. Data generation
