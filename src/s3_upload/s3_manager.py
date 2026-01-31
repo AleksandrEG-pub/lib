@@ -11,10 +11,14 @@ class S3Manager:
     def __init__(self):
         self.endpoint = os.getenv('S3_ENDPOINT')
         self.region = os.getenv('S3_REGION')
+        key=os.getenv("AWS_ACCESS_KEY_ID"),
+        secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
         self.fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
             anon=True,
+            key=key,
+            secret=secret,
             client_kwargs={'endpoint_url': self.endpoint,
-                           'region_name': self.region}
+                           'region_name': self.region,}
         )
 
     def init_bucket(self, bucket_name: str):

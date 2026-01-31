@@ -1,6 +1,21 @@
 name: it_one
 
 services:
+  airflow:
+    image: apache/airflow:3.1.7rc1-python3.13
+  airflow-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: airflow_pipeline
+    ports:
+      - "5678:5678"
+    env_file:
+      - path: ./env/spark.env
+        required: true
+      - path: ./env/database_docker.env
+        required: true
+
   kafka:
     image: apache/kafka:3.7.0
     env_file:
@@ -28,6 +43,9 @@ services:
       - "10456:8333"
       - "10457:23646"
     command: "server -s3 -dir=/data"
+    environment:
+      AWS_ACCESS_KEY_ID: s3admin
+      AWS_SECRET_ACCESS_KEY: s3secret
 
   spark-upload:
     build:

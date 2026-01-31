@@ -36,3 +36,8 @@ FROM spark_app AS kafka_pipeline
 COPY --chown=spark:spark entrypoint_kafka_pipeline.sh .
 ENTRYPOINT ["./entrypoint_kafka_pipeline.sh"]
 # ENTRYPOINT ["tail", "-f", "/dev/null"]
+
+FROM spark_app AS airflow_pipeline
+COPY --chown=spark:spark entrypoint_airflow_pipeline.sh .
+ENTRYPOINT ["./entrypoint_airflow_pipeline.sh"]
+# ENTRYPOINT ["tail", "-f", "/dev/null"]

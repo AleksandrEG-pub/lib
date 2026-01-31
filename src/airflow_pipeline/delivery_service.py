@@ -4,8 +4,10 @@ from datetime import datetime, timezone
 from importlib.resources import as_file, files
 
 import pyarrow.csv as pa_csv
-from s3_upload import s3_manager
+from s3_upload.s3_manager import s3manager
 from spark_upload import spark_sevice
+import pyspark.sql.types as st
+import pyspark.sql.functions as sf
 
 
 bucket_name = 'delivery'
@@ -24,12 +26,15 @@ def _read_csv():
         with as_file(resource) as path:
             yield (file, pa_csv.read_csv(path))
     
+    
 def init_data_from_csv():
-    s3_manager.init_bucket(bucket_name)
+    logging.info('starting data initialization from csv')
+    s3manager.init_bucket(bucket_name)
     for file in _read_csv():
         file_name = file[0]
         pa_table = file[1]
-        s3_manager.write_csv(bucket_name, file_name, pa_table)
+        s3manager.write_csv(bucket_name, file_name, pa_table)
+    logging.info('finished data initialization from csv')
         
         
 def _get_file_to_upload() -> str:
@@ -39,14 +44,23 @@ def _get_file_to_upload() -> str:
 def upload_from_s3_to_postgres():
     spark_session = spark_sevice.get_spark_session()
     file_name = _get_file_to_upload()
-    delivery_file_df = (spark_session.read
-        .csv(f"s3a://{bucket_name}/{file_name}", header=True)
-    )
+    s3_file_name = f"s3a://{bucket_name}/{file_name}"
+    logging.info(f"uploading file {s3_file_name} to postgres")
+    
+    delivery_type = st.StructType([
+        st.StructField('delivery_id', st.StringType()),
+        st.StructField('item_type', st.StringType()),
+        st.StructField('quantity', st.IntegerType()),
+        st.StructField('price_per_unit', st.DecimalType()),
+        st.StructField('manufacture_datetime', st.TimestampType()),
+    ])
+    delivery_file_df = (spark_session.read.csv(s3_file_name, header=True, schema=delivery_type))
     delivery_file_df.printSchema()
     delivery_file_df.show()
+    delivery_file_df.withColumn('source_file', sf.lit(file_name))
+    delivery_file_df.withColumn('upload_timestamp', sf.current_timestamp())
     
     # create a StructType for schema
-    
     # delivery_file_df.jdbc(
             # url=f"jdbc:postgresql://{db.config['host']}:{db.config['port']}/{db.config['dbname']}",
             # table='products',
@@ -61,7 +75,7 @@ def upload_from_s3_to_postgres():
     # prepend file name with timestamp of precessing    
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     new_name = f"{timestamp}_{file_name}"
-    s3_manager.move_file(bucket_name=bucket_name, src_path=new_name, target_dir=processed_directory)
+    s3manager.move_file(bucket_name=bucket_name, src_path=new_name, target_dir=processed_directory)
 
 
 def _find_latest_file(files: list[str]) -> str | None:
@@ -73,7 +87,7 @@ def _find_latest_file(files: list[str]) -> str | None:
     )
     
 def _get_last_uploaded() -> str:
-    files = s3_manager.list_files(bucket_name, processed_directory)
+    files = s3manager.list_files(bucket_name, processed_directory)
     return _find_latest_file(files)
     
     
@@ -82,7 +96,7 @@ def check_validity_of_file_upload() -> bool:
     if file_name is None:
         logging.error(f"no files in {processed_directory} directory")
         return False
-    file_lines_count = s3_manager.count_file_lines(bucket_name, file_name)
+    file_lines_count = s3manager.count_file_lines(bucket_name, file_name)
     # db select * from deliveries where source_file = '{file_name}'
     # db_count == file_lines_count    
     return True

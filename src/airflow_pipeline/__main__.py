@@ -25,6 +25,7 @@ for env_file in env_path.iterdir():
 
 def main():
     # init sql
+    logging.info('starting airflow pipeline')
     sql_service.init_sql()
     # init data, csv -> s3
     delivery_service.init_data_from_csv()
