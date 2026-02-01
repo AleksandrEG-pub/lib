@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 
 from airflow_pipeline import sql_service
 from airflow_pipeline import delivery_service
-from s3_upload import s3_manager
 
 
 logging.basicConfig(level=logging.INFO,
@@ -30,6 +29,7 @@ def main():
     # init data, csv -> s3
     delivery_service.init_data_from_csv()
 
+    delivery_service.upload_from_s3_to_postgres()
     # start http server:
     # - upload
     # - check

@@ -8,23 +8,27 @@ version = "0.0.1"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "psycopg2-binary==2.9.11",
-    "pandas==2.3.3",
+    "pyspark==4.0.1",
     "python-dotenv==1.2.1",
-    "SQLAlchemy==2.0.44",
-    "pytest==9.0.2",
-    "pytest-mock==3.15.1",
-    "Faker==38.2.0",
-    "clickhouse-connect==0.10.0",
     "tomli==2.3.0",
+    "Faker==38.2.0",
+]
+
+[project.optional-dependencies]
+tables = [
     "pyarrow==22.0.0",
     "pyarrow-stubs==20.0.0.20251215",
-    "s3fs==2025.12.0",
     "adbc-driver-manager==1.9.0",
     "adbc-driver-postgresql==1.9.0",
+    "pandas==2.3.3",
     "pyiceberg[sql-sqlite]==0.10.0",
-    "pyspark==4.0.1",
+]
+sql = ["psycopg2-binary==2.9.11", "SQLAlchemy==2.0.44"]
+integration = [
+    "clickhouse-connect==0.10.0",
+    "boto3==1.42.39",
     "kafka-python==2.3.0",
+    # "s3fs==2025.12.0",
 ]
 
 [project.scripts]
@@ -38,10 +42,11 @@ spark = "spark_upload:main"
 kafka = "kafka_pipeline:main"
 
 [tool.setuptools]
-package-dir={"" = "src"}
+package-dir = { "" = "src" }
 
 [tool.setuptools.package-data]
-kafka = ["sql/*.sql", "data/*"]
+airflow_pipeline = ["sql/*.sql", "data/*"]
+kafka_pipeline = ["sql/*.sql", "data/*"]
 spark_upload = ["sql/*.sql", "data/*"]
 s3_upload = ["sql/*.sql"]
 
@@ -53,8 +58,4 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = [
-    "-v",
-    "--strict-markers",
-    "--tb=short",
-]
+addopts = ["-v", "--strict-markers", "--tb=short"]

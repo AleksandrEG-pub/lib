@@ -24,8 +24,12 @@ ENV IVY_HOME=/opt/spark/app/.ivy2
 WORKDIR /opt/spark/app
 COPY --chown=spark:spark pyproject.toml ./
 RUN pip install -e .
+RUN pip install -e ".[sql]"
+RUN pip install -e ".[integration]"
+RUN pip install -e ".[tables]"
 COPY --chown=spark:spark src/ ./src/
 COPY --chown=spark:spark env/ ./env/
+# ENTRYPOINT ["tail", "-f", "/dev/null"]
 
 FROM spark_app AS spark_upload
 COPY --chown=spark:spark entrypoint_spark_upload.sh .

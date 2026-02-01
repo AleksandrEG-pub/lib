@@ -1,81 +1,101 @@
 import logging
 import os
-import s3fs
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pyarrow.csv as pa_csv
+import pyarrow.fs as fs
+import boto3
+from botocore.client import Config
 
 
 class S3Manager:
 
-    def __init__(self):
-        self.endpoint = os.getenv('S3_ENDPOINT')
-        self.region = os.getenv('S3_REGION')
-        key=os.getenv("AWS_ACCESS_KEY_ID"),
-        secret=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        self.fs: s3fs.S3FileSystem = s3fs.S3FileSystem(
-            anon=True,
-            key=key,
-            secret=secret,
-            client_kwargs={'endpoint_url': self.endpoint,
-                           'region_name': self.region,}
+    # ---------- infra ----------
+
+    def _s3_client(self):
+        return boto3.client(
+            "s3",
+            endpoint_url="http://seaweedfs:8333",
+            aws_access_key_id="admin",
+            aws_secret_access_key="key",
+            config=Config(connect_timeout=30, read_timeout=30, retries={"max_attempts": 1})
         )
 
+    def _fs(self) -> fs.S3FileSystem:
+        return fs.S3FileSystem(
+            endpoint_override="http://seaweedfs:8333",
+            access_key="admin",
+            secret_key="key",
+            scheme="http"
+        )
+
+    # ---------- bucket ----------
+
     def init_bucket(self, bucket_name: str):
-        try:
-            fs: s3fs.S3FileSystem = self.fs
-            if not fs.exists(bucket_name):
-                fs.mkdir(bucket_name)
-                logging.info(f"Bucket '{bucket_name}' created")
-        except Exception as e:
-            logging.error(f"Error checking/creating bucket: {e}")
-            raise e
+        s3 = self._s3_client()
+        existing = {b["Name"] for b in s3.list_buckets()["Buckets"]}
+        if bucket_name not in existing:
+            logging.info(f"creating bucket {bucket_name}")
+            s3.create_bucket(Bucket=bucket_name)
 
-    def write_as_parquet(self, bucket_name: str, file_name: str, content: pa.Table):
-        file_path = f"{bucket_name}/{file_name}"
-        with self.fs.open(file_path, 'wb') as f:
-            pq.write_table(content, f)
+    # ---------- parquet ----------
 
-    def read_parquet(self, bucket_name: str, file_name: str) -> pa.Table:
-        file_path = f"{bucket_name}/{file_name}"
-        with self.fs.open(file_path, "rb") as f:
-            table: pa.Table = pq.read_table(f)
-            table = self._convert_numeric_to_decimal(table)
-            return table
+    def write_parquet(self, bucket: str, file_name: str, table: pa.Table):
+        fsys = self._fs()
+        path = f"{bucket}/{file_name}"
+        with fsys.open_output_stream(path) as out:
+            pq.write_table(table, out)
+            
 
-    def write_as_csv(self, bucket_name: str, file_name: str, content: pa.Table):
-        file_path = f"{bucket_name}/{file_name}"
-        with self.fs.open(file_path, 'wb') as f:
-            pa_csv.write_csv(content, f)
-            logging.info(f"written file {file_path} to bucket {bucket_name}")
+    def read_parquet(self, bucket: str, key: str) -> pa.Table:
+        fsys = self._fs()
+        path = f"{bucket}/{key}"
+        with fsys.open_input_stream(path) as inp:
+            table = pq.read_table(inp)
+        return self._convert_numeric_to_decimal(table)
 
-    def list_files(self, bucket_name: str, processed_directory: str):
-        """
-        Returns a list of file paths inside bucket/processed_directory
-        """
-        path = f"{bucket_name}/{processed_directory}".rstrip("/")
-        if not self.fs.exists(path):
-            return []
+    # ---------- csv ----------
+
+    def write_csv(self, bucket: str, key: str, table: pa.Table):
+        fsys = self._fs()
+        path = f"{bucket}/{key}"
+        with fsys.open_output_stream(path) as out:
+            pa_csv.write_csv(table, out)
+
+    def read_csv(self, bucket: str, key: str) -> pa.Table:
+        fsys = self._fs()
+        path = f"{bucket}/{key}"
+        with fsys.open_input_stream(path) as inp:
+            return pa_csv.read_csv(inp)
+
+    # ---------- listing ----------
+
+    def list_files(self, bucket: str, prefix: str = "") -> list[str]:
+        fsys = self._fs()
+        base = f"{bucket}/{prefix}".rstrip("/") + "/"
+        selector = fs.FileSelector(base, recursive=False)
+        infos = fsys.get_file_info(selector)
         return [
-            p for p in self.fs.ls(path) if not p.endswith("/")
+            info.path.replace(f"{bucket}/", "")
+            for info in infos
+            if info.type == fs.FileType.File
         ]
 
-    def count_file_lines(self, bucket_name: str, file_name: str) -> int:
-        """
-        Counts number of records in a CSV file (excluding header)
-        """
-        file_path = f"{bucket_name}/{file_name}"
-        with self.fs.open(file_path, "rb") as f:
-            table = pa_csv.read_csv(f)
+    def get_first_root_file(self, bucket: str) -> str | None:
+        files = self.list_files(bucket)
+        return files[0] if files else None
+
+    # ---------- utils ----------
+
+    def count_file_lines(self, bucket: str, key: str) -> int:
+        table = self.read_csv(bucket, key)
         return table.num_rows
-    
 
-    def move_file(self, bucket_name: str, src_path: str, target_dir: str):
-        src = f"{bucket_name}/{src_path}"
-        dst = f"{bucket_name}/{target_dir.rstrip('/')}/{os.path.basename(src_path)}"
+    def move_file(self, bucket: str, src: str, target_dir: str):
+        fsys = self._fs()
+        dst = f"{bucket}/{target_dir.rstrip('/')}/{os.path.basename(src)}"
+        fsys.move(f"{bucket}/{src}", dst)
 
-        self.fs.copy(src, dst)
-        self.fs.rm(src)
 
-        
+
 s3manager: S3Manager = S3Manager()

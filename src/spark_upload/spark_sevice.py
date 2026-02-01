@@ -14,6 +14,8 @@ def get_spark_session():
         .config("spark.hadoop.fs.s3a.access.key", os.getenv('SPARK_HADOOP_FS_S3_A_ACCESS_KEY'))
         .config("spark.hadoop.fs.s3a.secret.key", os.getenv('SPARK_HADOOP_FS_S3_A_SECRET_KEY'))
         .config("spark.hadoop.fs.s3a.endpoint", os.getenv('SPARK_HADOOP_FS_S3_A_ENDPOINT'))
+        .config("spark.hadoop.fs.s3a.change.detection.policy", 'none')
+        .config("spark.hadoop.fs.s3a.change.detection.mode", 'none')
         .config("spark.hadoop.fs.s3a.path.style.access", os.getenv('SPARK_HADOOP_FS_S3_A_PATH_STYLE_ACCESS'))
         .config("spark.hadoop.fs.s3a.aws.credentials.provider",
                 os.getenv('SPARK_HADOOP_FS_S3_A_AWS_CREDENTIALS_PROVIDER'))
