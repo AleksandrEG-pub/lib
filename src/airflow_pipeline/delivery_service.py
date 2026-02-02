@@ -46,6 +46,12 @@ def init_data_from_csv():
 
 def upload_from_s3_to_postgres():
     spark_session: SparkSession = spark_sevice.get_spark_session()
+    # todo: if not files left no need to launch spark!!!!!
+    # todo: if not files left no need to launch spark!!!!!
+    # todo: if not files left no need to launch spark!!!!!
+    # todo: if not files left no need to launch spark!!!!!
+    # todo: if not files left no need to launch spark!!!!!
+    # todo: if not files left no need to launch spark!!!!!
     file_name = s3manager.get_first_file(bucket_name)
     s3_file_name = f"s3a://{bucket_name}/{file_name}"
     logging.info(f"uploading file {s3_file_name} to postgres")

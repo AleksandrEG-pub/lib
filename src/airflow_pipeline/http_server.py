@@ -11,6 +11,8 @@ class PipelineHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"OK")
+        elif self.path == "/notification":
+            logging.info("sending notification to telegram")
         else:
             self.send_error(404)
 
@@ -21,6 +23,8 @@ class PipelineHandler(BaseHTTPRequestHandler):
             last_upload_valid: bool = delivery_service.check_validity_of_file_upload()
             result = b"true" if last_upload_valid else b"false"
             self.wfile.write(result)
+            # После успешного запуска DAG №2 в технической таблицу БД PostgreSQL 
+            # сохранены данные DQ-проверки для обработанного файла
         else:
             self.send_error(404)
 

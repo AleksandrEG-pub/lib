@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 from airflow.sdk import DAG, task
 from airflow.providers.http.operators.http import HttpOperator
 
-with DAG(dag_id="airflow-pipeline", start_date=datetime(2025, 1, 1), schedule="*/1 * * * *") as dag:
+# with DAG(dag_id="airflow-pipeline", start_date=datetime(2025, 1, 1), schedule="*/10 * * * *") as dag:
+with DAG(dag_id="airflow-pipeline", start_date=datetime(2025, 1, 1), schedule="0 * * * *") as dag:
     upload_from_s3_to_postgres = HttpOperator(
         task_id="upload_from_s3_to_postgres",
         http_conn_id="backend",
