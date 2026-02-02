@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import os
 import logging
 from importlib.resources import as_file, files
@@ -13,7 +14,7 @@ from database.database_connection import db
 
 
 bucket_name = 'delivery'
-processed_directory = 'processed'
+processed_directory = 'processed/'
 
 
 def _read_csv():
@@ -74,9 +75,8 @@ def upload_from_s3_to_postgres():
         f"delivery file {file_name} written to table 'bakery_deliveries' in postgres")
 
     # prepend file name with timestamp of precessing
-    # timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    # new_name = f"{timestamp}_{file_name}"
-    # s3manager.move_file(bucket_name=bucket_name, src_path=new_name, target_dir=processed_directory)
+    s3manager.move_file(bucket_name=bucket_name, src_path=file_name, target_dir=processed_directory)
+    logging.info(f"file {file_name} moved to 'processed' directory in '{bucket_name}' bucket")
 
 
 def _find_latest_file(files: list[str]) -> str | None:

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import io
 import logging
 import os
@@ -65,6 +66,97 @@ class S3Manager:
         first = min(obj["Key"] for obj in resp["Contents"])
         logging.info(f"found first file: {first}")
         return first
+    
+    def move_file(self, bucket_name: str, src_path: str, target_dir: str) -> bool:
+        """
+        Move a file within the same bucket from src_path to target directory
+        Adds timestamp prefix to avoid filename collisions
+        
+        Args:
+            bucket_name: Name of the S3 bucket
+            src_path: Source file path in bucket (e.g., 'folder/file.txt')
+            target_dir: Target directory path (e.g., 'processed/')
+                       Must end with '/'
+        
+        Returns:
+            bool: True if move successful, False otherwise
+        
+        Examples:
+            move_file('my-bucket', 'uploads/file.txt', 'processed/')
+            # Moves to 'processed/20250115_143045_file.txt'
+            
+            move_file('my-bucket', 'data/report.pdf', 'archived/')
+            # Moves to 'archived/20250115_143045_report.pdf'
+        """
+        try:
+            # 1. Validate inputs
+            if not target_dir.endswith('/'):
+                raise ValueError("target_dir must end with '/' (e.g., 'processed/')")
+            
+            # 2. Normalize paths
+            src_path = src_path.strip('/')
+            target_dir = target_dir.rstrip('/') + '/'  # Ensure single trailing slash
+            
+            # 3. Extract filename and generate new name with timestamp
+            src_filename = os.path.basename(src_path)
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            
+            # Add timestamp prefix (not suffix) to maintain file extension
+            new_name = f"{timestamp}_{src_filename}"
+            target_key = f"{target_dir}{new_name}"
+            
+            print(f"Moving: {src_path} -> {target_key}")
+            
+            # 4. Check if source file exists
+            try:
+                self._get_s3_client().head_object(Bucket=bucket_name, Key=src_path)
+            except ClientError as e:
+                if e.response['Error']['Code'] == '404':
+                    print(f"Source file {src_path} not found in bucket {bucket_name}")
+                    return False
+                raise
+            
+            # 5. Check if target already exists (unlikely with timestamp but safe)
+            try:
+                self._get_s3_client().head_object(Bucket=bucket_name, Key=target_key)
+                print(f"Warning: Target file {target_key} already exists, overwriting")
+            except ClientError:
+                pass  # Target doesn't exist, which is expected
+            
+            # 6. Copy object to new location
+            copy_source = {
+                'Bucket': bucket_name,
+                'Key': src_path
+            }
+            
+            self._get_s3_client().copy_object(
+                Bucket=bucket_name,
+                CopySource=copy_source,
+                Key=target_key
+            )
+            print(f"Copied to: {target_key}")
+            
+            # 7. Delete original file
+            self._get_s3_client().delete_object(
+                Bucket=bucket_name,
+                Key=src_path
+            )
+            print(f"Deleted original: {src_path}")
+            
+            print(f"Successfully moved {src_path} to {target_key}")
+            return True
+            
+        except ValueError as e:
+            print(f"Validation error: {str(e)}")
+            return False
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_msg = e.response['Error']['Message']
+            print(f"S3 Error ({error_code}): {error_msg}")
+            return False
+        except Exception as e:
+            print(f"Unexpected error: {str(e)}")
+            return False
 
 
 s3manager: S3Manager = S3Manager()
