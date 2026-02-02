@@ -3,6 +3,14 @@ name: it_one
 services:
   airflow:
     image: apache/airflow:3.1.7rc1-python3.13
+    command: standalone
+    environment:
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: True
+      AIRFLOW_CONN_BACKEND: http://airflow-pipeline:8080
+    ports:
+      - "10460:8080"
+    volumes:
+      - ./src/airflow_dags:/opt/airflow/dags
     
   airflow-pipeline:
     build:
