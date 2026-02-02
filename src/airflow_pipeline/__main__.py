@@ -3,7 +3,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from airflow_pipeline import sql_service
-from airflow_pipeline import delivery_service
+from airflow_pipeline import delivery_service 
+from airflow_pipeline.http_server import server
 
 
 logging.basicConfig(level=logging.INFO,
@@ -28,11 +29,7 @@ def main():
     sql_service.init_sql()
     # init data, csv -> s3
     delivery_service.init_data_from_csv()
-
-    delivery_service.upload_from_s3_to_postgres()
-    # start http server:
-    # - upload
-    # - check
+    server.start_server()
 
     # upload: once per 1 hour load files from s3 to postgres
     # data quality: check loaded amount

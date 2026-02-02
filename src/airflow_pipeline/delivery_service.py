@@ -69,7 +69,7 @@ def upload_from_s3_to_postgres():
         properties= {
             'user': os.getenv('POSTGRES_USER'),
             'password': os.getenv('POSTGRES_PASSWORD'),
-        }
+        }  
     )
     logging.info(
         f"delivery file {file_name} written to table 'bakery_deliveries' in postgres")
@@ -87,10 +87,10 @@ def _find_latest_file(files: list[str]) -> str | None:
         key=lambda p: os.path.basename(p).split("_", 1)[0]
     )
 
-
 def _get_last_uploaded() -> str:
-    files = s3manager.list_files(bucket_name, processed_directory)
-    return _find_latest_file(files)
+    # files = s3manager.list_files(bucket_name, processed_directory)
+    # return _find_latest_file(files)
+    return None
 
 
 def check_validity_of_file_upload() -> bool:

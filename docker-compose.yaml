@@ -10,6 +10,7 @@ services:
       dockerfile: Dockerfile.spark_app
       target: airflow_pipeline
     ports:
+      - "10459:8080"
       - "5678:5678"
     env_file:
       - path: ./env/spark.env
