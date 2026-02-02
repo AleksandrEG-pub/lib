@@ -54,5 +54,17 @@ class S3Manager:
             table = self._convert_numeric_to_decimal(table)
             return table
 
+    def get_first_file(self, bucket, prefix=None):
+        kwargs = {"Bucket": bucket}
+        if prefix:
+            kwargs["Prefix"] = prefix
+        resp = self._get_s3_client().list_objects_v2(**kwargs)
+        if "Contents" not in resp:
+            logging.info('bucket is empty')
+            return None  # bucket / prefix empty
+        first = min(obj["Key"] for obj in resp["Contents"])
+        logging.info(f"found first file: {first}")
+        return first
+
 
 s3manager: S3Manager = S3Manager()
