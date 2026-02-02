@@ -49,11 +49,12 @@ class S3Manager:
 
 
     def read_parquet(self, bucket_name: str, file_name: str) -> pa.Table:
-        file_path = f"{bucket_name}/{file_name}"
-        with self.fs.open(file_path, "rb") as f:
-            table: pa.Table = pq.read_table(f)
-            table = self._convert_numeric_to_decimal(table)
-            return table
+        """Read Parquet file from S3 and return pyarrow Table"""
+        buf = io.BytesIO()
+        self._get_s3_client().download_fileobj(bucket_name, file_name, buf)
+        buf.seek(0)
+        table = pq.read_table(buf)
+        return table
 
     def get_first_file(self, bucket, prefix=None):
         kwargs = {"Bucket": bucket}
@@ -146,6 +147,41 @@ class S3Manager:
         except Exception as e:
             logging.error(f"Unexpected error: {str(e)}")
             return False
+
+
+    def list_files_in_directory(self, bucket_name, directory_prefix):
+        """
+        List files in a specific directory in an S3 bucket
+        
+        Args:
+            bucket_name (str): Name of the S3 bucket
+            directory_prefix (str): Directory path (e.g., 'dir1/' or 'folder/subfolder/')
+        
+        Returns:
+            list: List of file keys/paths in the directory
+        """
+        s3_client = self._get_s3_client()
+        # Ensure directory_prefix ends with '/'
+        if not directory_prefix.endswith('/'):
+            directory_prefix += '/'
+        try:
+            # List objects with the given prefix
+            response = s3_client.list_objects_v2(
+                Bucket=bucket_name,
+                Prefix=directory_prefix
+            )
+            if 'Contents' not in response:
+                return []
+            # Extract file paths (excluding the directory itself)
+            files = []
+            for obj in response['Contents']:
+                # Skip the directory itself if it appears as an object
+                if obj['Key'] != directory_prefix:
+                    files.append(obj['Key'])
+            return files
+        except ClientError as e:
+            print(f"Error accessing bucket: {e}")
+            return []
 
 
 s3manager: S3Manager = S3Manager()

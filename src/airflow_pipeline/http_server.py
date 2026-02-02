@@ -21,14 +21,6 @@ class PipelineHandler(BaseHTTPRequestHandler):
             last_upload_valid: bool = delivery_service.check_validity_of_file_upload()
             result = b"true" if last_upload_valid else b"false"
             self.wfile.write(result)
-        elif self.path == "/test":
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"test")
-        elif self.path == "/test2":
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"test2")
         else:
             self.send_error(404)
 

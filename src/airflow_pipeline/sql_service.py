@@ -9,3 +9,10 @@ def init_sql():
     with as_file(resource) as path:
         ds.execute_scripts(path)
     logging.info('sql tables initialized')
+
+def count_lines_per_uploaded_file(file_name: str) -> int:
+    with db.cursor() as cursor:
+        cursor.execute("select count (bd.source_file) from bakery_deliveries bd  where bd.source_file = %s", (file_name,))
+        row = cursor.fetchone()
+        if row:
+            return int(row[0])

@@ -7,8 +7,8 @@ with DAG(dag_id="airflow-pipeline", start_date=datetime(2025, 1, 1), schedule="*
     upload_from_s3_to_postgres = HttpOperator(
         task_id="upload_from_s3_to_postgres",
         http_conn_id="backend",
-        endpoint="/test",
-        method="GET",
+        endpoint="/upload",
+        method="POST",
         # timeout=60,                 # must be > expected runtime
         retries=2,
         retry_delay=timedelta(seconds=30),
@@ -16,7 +16,7 @@ with DAG(dag_id="airflow-pipeline", start_date=datetime(2025, 1, 1), schedule="*
     upload_check = HttpOperator(
         task_id="upload_check",
         http_conn_id="backend",
-        endpoint="/test2",
+        endpoint="/validate-last-upload",
         method="GET",
     )
 

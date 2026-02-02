@@ -7,10 +7,12 @@ import pyarrow as pa
 import pyarrow.csv as pa_csv
 from s3_upload.s3_manager import s3manager
 from spark_upload import spark_sevice
+from airflow_pipeline import sql_service
 import pyspark.sql.types as st
 import pyspark.sql.functions as sf
 from pyspark.sql import SparkSession
 from database.database_connection import db
+
 
 
 bucket_name = 'delivery'
@@ -79,18 +81,12 @@ def upload_from_s3_to_postgres():
     logging.info(f"file {file_name} moved to 'processed' directory in '{bucket_name}' bucket")
 
 
-def _find_latest_file(files: list[str]) -> str | None:
+def _get_last_uploaded() -> str:
+    files = s3manager.list_files_in_directory(bucket_name, processed_directory)
     if not files:
         return None
-    return max(
-        files,
-        key=lambda p: os.path.basename(p).split("_", 1)[0]
-    )
-
-def _get_last_uploaded() -> str:
-    # files = s3manager.list_files(bucket_name, processed_directory)
-    # return _find_latest_file(files)
-    return None
+    # format file_name: 20260202_091605_delivery_1.parquet
+    return max(files, key=lambda file_name: file_name.split('_')[0] + file_name.split('_')[1])
 
 
 def check_validity_of_file_upload() -> bool:
@@ -98,7 +94,10 @@ def check_validity_of_file_upload() -> bool:
     if file_name is None:
         logging.error(f"no files in {processed_directory} directory")
         return False
-    file_lines_count = s3manager.count_file_lines(bucket_name, file_name)
-    # db select * from deliveries where source_file = '{file_name}'
-    # db_count == file_lines_count
-    return True
+    file: pa.Table = s3manager.read_parquet(bucket_name, file_name)
+    lines_in_file: int = file.num_rows
+    logging.info(f"lines in file {processed_directory}{file_name}: {lines_in_file}")
+    file_name_without_timestamp = file_name.split('_', 2)[2]
+    lines_uploaded: int = sql_service.count_lines_per_uploaded_file(file_name_without_timestamp)
+    logging.info(f"lines uploaded for file {processed_directory}{file_name}: {lines_uploaded}")
+    return lines_in_file == lines_uploaded
