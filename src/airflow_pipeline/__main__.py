@@ -29,7 +29,7 @@ def main():
     # init data, csv -> s3
     delivery_service.init_data_from_csv()
 
-    delivery_service.upload_from_s3_to_postgres()
+    # delivery_service.upload_from_s3_to_postgres()
     # start http server:
     # - upload
     # - check

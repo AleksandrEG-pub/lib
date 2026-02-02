@@ -7,29 +7,6 @@ name = "data_migrations"
 version = "0.0.1"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-    "pyspark==4.0.1",
-    "python-dotenv==1.2.1",
-    "tomli==2.3.0",
-    "Faker==38.2.0",
-]
-
-[project.optional-dependencies]
-tables = [
-    "pyarrow==22.0.0",
-    "pyarrow-stubs==20.0.0.20251215",
-    "adbc-driver-manager==1.9.0",
-    "adbc-driver-postgresql==1.9.0",
-    "pandas==2.3.3",
-    "pyiceberg[sql-sqlite]==0.10.0",
-]
-sql = ["psycopg2-binary==2.9.11", "SQLAlchemy==2.0.44"]
-integration = [
-    "clickhouse-connect==0.10.0",
-    "boto3==1.42.39",
-    "kafka-python==2.3.0",
-    # "s3fs==2025.12.0",
-]
 
 [project.scripts]
 library = "library.lib:main"
@@ -59,3 +36,4 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = ["-v", "--strict-markers", "--tb=short"]
+ 

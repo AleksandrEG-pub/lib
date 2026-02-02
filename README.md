@@ -133,7 +133,7 @@ S3 provider is seaweedfs. Started in docker with s3 API on http://seaweedfs:8333
 ```
 Admin ui can be started with command:
 ```
-docker-compose exec -d seaweedfs /usr/bin/weed admin
+docker compose exec -d seaweedfs /usr/bin/weed admin
 ```
 Admin ui will be available on http://seaweedfs:23646 or http://localhost:10457
 

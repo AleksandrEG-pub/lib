@@ -8,25 +8,36 @@ RUN mvn -B dependency:copy-dependencies \
 FROM spark:4.0.1-python3 AS spark_base
 COPY --from=maven_jars /deps /opt/spark/jars
 
-FROM spark_base AS spark_app
+FROM spark_base AS spark_app_base
 USER root
 RUN apt update && apt install -y python3.10-venv
 USER spark
 RUN python3 -m venv /opt/spark/venv/spark-venv
 ENV VIRTUAL_ENV="/opt/spark/venv/spark-venv"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN pip install debugpy==1.8.19
 RUN mkdir -p /opt/spark/app/src
+RUN mkdir -p /opt/spark/app/env
 RUN mkdir -p /opt/spark/app/.pip_cache
 RUN mkdir -p /opt/spark/app/.ivy2
-ENV PIP_CACHE_DIR=/opt/spark/app/.pip_cache
 ENV IVY_HOME=/opt/spark/app/.ivy2
+ENV PIP_CACHE_DIR=/opt/spark/app/.pip_cache
 WORKDIR /opt/spark/app
+ENTRYPOINT ["tail", "-f", "/dev/null"]
+
+FROM spark_app_base AS spark_app
+COPY --chown=spark:spark ./dependencies/spark.txt  ./dependencies/spark.txt 
+RUN pip install -r ./dependencies/spark.txt --no-cache-dir
+COPY --chown=spark:spark ./dependencies/table-frameworks.txt ./dependencies/table-frameworks.txt
+RUN pip install -r ./dependencies/table-frameworks.txt --no-cache-dir
+COPY --chown=spark:spark ./dependencies/integrations.txt  ./dependencies/integrations.txt 
+RUN pip install -r ./dependencies/integrations.txt --no-cache-dir
+COPY --chown=spark:spark ./dependencies/sql.txt  ./dependencies/sql.txt 
+RUN pip install -r ./dependencies/sql.txt --no-cache-dir
+COPY --chown=spark:spark ./dependencies/simple-libs.txt  ./dependencies/simple-libs.txt 
+RUN pip install -r ./dependencies/simple-libs.txt --no-cache-dir
+RUN pip install debugpy==1.8.19
 COPY --chown=spark:spark pyproject.toml ./
 RUN pip install -e .
-RUN pip install -e ".[sql]"
-RUN pip install -e ".[integration]"
-RUN pip install -e ".[tables]"
 COPY --chown=spark:spark src/ ./src/
 COPY --chown=spark:spark env/ ./env/
 # ENTRYPOINT ["tail", "-f", "/dev/null"]
@@ -45,3 +56,4 @@ FROM spark_app AS airflow_pipeline
 COPY --chown=spark:spark entrypoint_airflow_pipeline.sh .
 ENTRYPOINT ["./entrypoint_airflow_pipeline.sh"]
 # ENTRYPOINT ["tail", "-f", "/dev/null"]
+

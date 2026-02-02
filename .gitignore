@@ -9,3 +9,6 @@ local
 *.egg-info/
 .idea
 .Trash*
+.pip_cache
+build
+install.sh

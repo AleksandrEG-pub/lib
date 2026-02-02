@@ -1,6 +1,5 @@
 import os
 import logging
-from datetime import datetime, timezone
 from importlib.resources import as_file, files
 
 import pyarrow as pa
@@ -31,12 +30,12 @@ def _read_csv():
     
 def init_data_from_csv():
     logging.info('starting data initialization from csv')
-    s3manager.init_bucket(bucket_name)
+    s3manager.init_bucket_boto(bucket_name)
     for file in _read_csv():
         file_name: str = file[0]
         file_name = file_name.replace('.csv', '.parquet')
         pa_table: pa.Table = file[1]
-        s3manager.write_parquet(bucket_name, file_name, pa_table)
+        s3manager.write_as_parquet(bucket_name, file_name, pa_table)
     logging.info('finished data initialization from csv')
         
 
