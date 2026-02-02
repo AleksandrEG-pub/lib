@@ -12,3 +12,4 @@ local
 .pip_cache
 build
 install.sh
+bot
