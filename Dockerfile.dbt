@@ -1,0 +1,20 @@
+FROM python:3.12.12-trixie
+RUN mkdir -p /opt/app/src
+RUN mkdir -p /opt/app/env
+WORKDIR /opt/app
+RUN python3 -m venv .venv
+COPY ./dependencies/dbt.txt  ./dependencies/dbt.txt 
+RUN pip install -r ./dependencies/dbt.txt --no-cache-dir
+COPY ./dependencies/sql.txt  ./dependencies/sql.txt 
+RUN pip install -r ./dependencies/sql.txt --no-cache-dir
+COPY ./dependencies/table-frameworks.txt  ./dependencies/table-frameworks.txt
+RUN pip install -r ./dependencies/table-frameworks.txt --no-cache-dir
+COPY ./dependencies/simple-libs.txt  ./dependencies/simple-libs.txt
+RUN pip install -r ./dependencies/simple-libs.txt --no-cache-dir
+COPY pyproject.toml ./
+COPY src/database/ ./src/database/
+COPY src/dbt_star/ ./src/dbt_star/
+COPY env/ ./env/
+RUN pip install -e .
+COPY entrypoint_dbt_star.sh .
+ENTRYPOINT ["./entrypoint_dbt_star.sh"]

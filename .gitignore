@@ -8,3 +8,7 @@ local
 *$py.class
 *.egg-info/
 .idea
+
+src/dbt_star/logs
+src/dbt_star/star_schema/logs
+src/dbt_star/star_schema/target

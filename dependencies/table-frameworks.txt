@@ -1,0 +1,5 @@
+pyarrow==22.0.0
+pyarrow-stubs==20.0.0.20251215
+adbc-driver-manager==1.9.0
+adbc-driver-postgresql==1.9.0
+pandas==2.3.3

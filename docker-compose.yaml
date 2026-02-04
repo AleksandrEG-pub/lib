@@ -1,6 +1,11 @@
 name: it_one
 
 services:
+  dbt-star:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dbt
+
   seaweedfs:
     image: chrislusf/seaweedfs:4.04
     ports:
