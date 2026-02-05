@@ -134,3 +134,37 @@ s3_upload module does following:
 - load these products from postgres to s3 in bucket root as products.parquet
 - load same products from postgres to s3 in bucket as Iceberg structure under iceberg_warehouse dir
 - Result are described in ./src/s3/upload/results.txt
+
+### Data build tool DBT, week 9
+#### ports
+Required ports on host:
+- 10452 - postgres
+
+#### setup, launch scripts:
+Start required services:
+```
+./start-database.sh
+```
+
+DBT application executed in extra container:
+```
+./start-dbt-star.sh
+```
+
+#### dbt application description:
+Application flow located in ```entrypoint_dbt_star.sh``` and performs few steps:
+- initialize source tables: ```products, customers, sales``` from ```data/init-tables.sql```
+- populate initial data from ```data/init-data.sql```
+- Run dbt for snapshots and models
+- updates data in source tables from ```data/update-data.sql```
+- Run 2nd time dbt to update star model's data
+
+DBT creates 5 objects in database:
+- table: customers_snapshot
+- table: products_snapshot
+- table: sales_facts
+- view: dim_customer
+- view: dim_product
+
+Snapshots are dbt provided functionality for SCD2 
+
