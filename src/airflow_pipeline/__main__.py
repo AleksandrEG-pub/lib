@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 
 from airflow_pipeline import sql_service
 from airflow_pipeline import delivery_service 
-from airflow_pipeline.http_server import server
 
 
 logging.basicConfig(level=logging.INFO,
@@ -15,6 +14,7 @@ required_envs = [
     'spark.env',
     's3_docker.env',
     'airflow.env',
+    'tg.env',
 ]
 
 for env_file in env_path.iterdir():
@@ -22,6 +22,7 @@ for env_file in env_path.iterdir():
         logging.info(f"lading env file {env_file}")
         load_dotenv(env_file)
 
+from airflow_pipeline.http_server import server
 def main():
     logging.info('starting airflow pipeline')
     sql_service.init_sql()

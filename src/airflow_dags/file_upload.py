@@ -7,13 +7,12 @@ from airflow.utils.trigger_rule import TriggerRule
 
 with DAG(
     dag_id="airflow-pipeline",
-    start_date=datetime(2025, 1, 1),
-    schedule="*/2 * * * *",
+    start_date=datetime(2026, 1, 1),
+    schedule="* 0 * * *",
     catchup=False,
 ) as dag:
 
     # -------- main pipeline --------
-
     upload_from_s3_to_postgres = HttpOperator(
         task_id="upload_from_s3_to_postgres",
         http_conn_id="backend",
@@ -31,7 +30,6 @@ with DAG(
     )
 
     # -------- notifications --------
-
     notify_success = HttpOperator(
         task_id="notify_success",
         http_conn_id="backend",
@@ -67,7 +65,6 @@ with DAG(
     )
 
     # -------- flow --------
-
     upload_from_s3_to_postgres >> upload_check
     [upload_from_s3_to_postgres, upload_check] >> notify_success
     [upload_from_s3_to_postgres, upload_check] >> notify_failure

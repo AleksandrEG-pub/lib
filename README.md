@@ -248,3 +248,71 @@ select * from flights_upload;
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one --group console --from-beginning
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.dlq --group console --from-beginning
 ```
+
+
+### Airflow, week 9
+
+#### ports
+Required ports on host:
+- 10452 - potgres
+- 10458 - spark master ui, awailable by default
+- 10460 - airflow ui
+
+#### setup, launch scripts:
+Start required sevices:
+```
+./start-database.sh && ./start-spark.sh && ./start-airflow.sh
+```
+
+Airflow application executed in extra container:
+```
+./start-airflow-pipeline-app.sh
+```
+
+#### application description:
+Application is a HTTP server with following endpoints:
+- POST /upload                  triggers upload files from s3 to postgres
+- GET /validate-last-upload     triggers check for last uploaded file
+- POST /notification            send notification to telegram
+
+Application initialization steps:
+1. creates tables from ./sql/init-tables.sql in postgres: 'bakery_deliveries', 'data_quality_checks'
+2. upload files from project to s3 storage in bucket 'delivery', converting to parquet.
+- data/delivery_1.csv
+- data/delivery_2.csv
+- data/delivery_3.csv
+- data/delivery_4.csv
+- data/delivery_5.csv
+
+Application working steps:
+- after POST /upload request application get first file from root of s3 'delivery' bucket and using spark transfer file's data to postgres table bakery_deliveries'
+- uploaded file moved to /processed directory in same bucket
+- on GET /validate-last-upload request application retrives last file from processed directory and compares amount of row with uploaded data. 
+(processed files have timestamp prefix, so easy to find latest, postgres table has 'source_file' to know from which file data was uploaded)
+- on GET /notification request application sends message to preonfigured telegram chat.
+
+
+#### Chat configurations:
+Configuration related to telegram chat are in ```./env/tg.env.```
+Please provide your own tokens.
+
+
+#### airflow dag description
+Ariflow's Dag uses HTTP requests to trigger actions on airflow_pipeline server.
+After airflow start, it will discover available dags from docker volume.
+
+! Important
+Discovered dag are not enabled by default. Can be enabled from ui on http://localhost:10460/dags/airflow-pipeline
+
+Airflow dag is located in src/airflow_dags/file_upload.py:
+Consequently executed:
+```upload_from_s3_to_postgres >> upload_check```
+
+If upload and check were successful, then send success notification:
+```[upload_from_s3_to_postgres, upload_check] >> notify_success```
+
+If any upload or check failed, then send failure notification:
+```[upload_from_s3_to_postgres, upload_check] >> notify_failure```
+
+Ideally, notificaiton server be separated from pipeline server.
+

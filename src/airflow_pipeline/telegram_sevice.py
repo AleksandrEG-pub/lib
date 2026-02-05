@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime
 import logging
@@ -26,7 +27,6 @@ class TelegramChatNotification:
         result: {result}
         details: {details}
         """
-
         for attempt in range(1, self._retries + 1):
             try:
                 asyncio.run(self._bot.send_message(chat_id=self._chat_id, text=message))
@@ -39,8 +39,8 @@ class TelegramChatNotification:
                     logger.error("Failed to send Telegram notification after retries.")
 
 notification = TelegramChatNotification(
-                    chat_id='asdfasffsfafd',
-                    token='asdfasffsfafd',
+                    chat_id=os.getenv('TG_CHAT_ID'),
+                    token=os.getenv('TG_TOKEN'),
                     retries=3,
                     retry_delay=60,
                 )
