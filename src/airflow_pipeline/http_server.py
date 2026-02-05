@@ -12,23 +12,34 @@ class PipelineHandler(BaseHTTPRequestHandler):
         if self.path == "/notification":
             length = int(self.headers["Content-Length"])
             payload = json.loads(self.rfile.read(length))
-            notification.send(
-                dag_id=payload["dag_id"],
-                dag_execution_time=datetime.fromisoformat(payload["dag_execution_time"]),
-                result=payload["result"],
-                details=payload["details"],
-            )
-            logging.info("sending notification to telegram")
-            self.send_response(200)
-            self.end_headers()
+            try:
+                notification.send(
+                    dag_id=payload["dag_id"],
+                    dag_execution_time=datetime.fromisoformat(payload["dag_execution_time"]),
+                    result=payload["result"],
+                    details=payload["details"],
+                )
+                logging.info("sending notification to telegram")
+                self.send_response(200)
+                self.end_headers()
+            except Exception as e:
+                logging.error(f"Send notification failed {e}")
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b"NOTIFICATION_FAILED")
         if self.path == '/upload':
             try:
-                delivery_service.upload_from_s3_to_postgres()
-                self.send_response(201)
-                self.end_headers()
-                self.wfile.write(b"UPLOAD_OK")
+                uploaded: bool = delivery_service.upload_from_s3_to_postgres()
+                if uploaded:
+                    self.send_response(201)
+                    self.end_headers()
+                    self.wfile.write(b"UPLOAD_OK")
+                else:
+                    self.send_response(409)
+                    self.end_headers()
+                    self.wfile.write(b"NO_FILES")
             except Exception as e:
-                logging.exception("Upload failed")
+                logging.error(f"Upload failed {e}")
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b"UPLOAD_FAILED")
@@ -47,7 +58,8 @@ class PipelineHandler(BaseHTTPRequestHandler):
                     self.send_response(422)  # semantic validation failure
                     self.end_headers()
                     self.wfile.write(b"INVALID")
-            except Exception:
+            except Exception as e:
+                logging.error(f"check failed {e}")
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b"VALIDATION_ERROR")

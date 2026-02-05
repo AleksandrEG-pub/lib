@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import os
 import logging
 from importlib.resources import as_file, files
@@ -13,11 +12,8 @@ import pyspark.sql.functions as sf
 from pyspark.sql import SparkSession
 from database.database_connection import db
 
-
-
 bucket_name = 'delivery'
 processed_directory = 'processed/'
-
 
 def _read_csv():
     delivery_files = [
@@ -46,30 +42,18 @@ def init_data_from_csv():
 
 def upload_from_s3_to_postgres():
     spark_session: SparkSession = spark_sevice.get_spark_session()
-    # todo: if not files left no need to launch spark!!!!!
-    # todo: if not files left no need to launch spark!!!!!
-    # todo: if not files left no need to launch spark!!!!!
-    # todo: if not files left no need to launch spark!!!!!
-    # todo: if not files left no need to launch spark!!!!!
-    # todo: if not files left no need to launch spark!!!!!
     file_name = s3manager.get_first_file(bucket_name)
+    if file_name is None:
+        logging.info("No files to upload")
+        return False
     s3_file_name = f"s3a://{bucket_name}/{file_name}"
     logging.info(f"uploading file {s3_file_name} to postgres")
-    delivery_type = st.StructType([
-        st.StructField('delivery_id', st.StringType()),
-        st.StructField('item_type', st.StringType()),
-        st.StructField('quantity', st.IntegerType()),
-        st.StructField('price_per_unit', st.DecimalType()),
-        st.StructField('manufacture_datetime', st.TimestampType()),
-    ])
     delivery_file_df = (spark_session.read.parquet(s3_file_name)
                         .withColumn('source_file', sf.lit(file_name))
                         .withColumn('upload_timestamp', sf.current_timestamp())
                         )
     delivery_file_df.printSchema()
     delivery_file_df.show()
-
-    # create a StructType for schema
     delivery_file_df.write.jdbc(
         url=f"jdbc:postgresql://{db.config['host']}:{db.config['port']}/{db.config['dbname']}",
         table='bakery_deliveries',
@@ -81,10 +65,10 @@ def upload_from_s3_to_postgres():
     )
     logging.info(
         f"delivery file {file_name} written to table 'bakery_deliveries' in postgres")
-
     # prepend file name with timestamp of precessing
     s3manager.move_file(bucket_name=bucket_name, src_path=file_name, target_dir=processed_directory)
     logging.info(f"file {file_name} moved to 'processed' directory in '{bucket_name}' bucket")
+    return True
 
 
 def _get_last_uploaded() -> str:
@@ -106,4 +90,6 @@ def check_validity_of_file_upload() -> bool:
     file_name_without_timestamp = file_name.split('_', 2)[2]
     lines_uploaded: int = sql_service.count_lines_per_uploaded_file(file_name_without_timestamp)
     logging.info(f"lines uploaded for file {processed_directory}{file_name}: {lines_uploaded}")
-    return lines_in_file == lines_uploaded
+    is_valid = lines_in_file == lines_uploaded
+    sql_service.save_upload_check_result(file_name=file_name, is_valid=is_valid)    
+    return is_valid

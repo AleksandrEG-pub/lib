@@ -56,17 +56,23 @@ class S3Manager:
         table = pq.read_table(buf)
         return table
 
-    def get_first_file(self, bucket, prefix=None):
-        kwargs = {"Bucket": bucket}
-        if prefix:
-            kwargs["Prefix"] = prefix
-        resp = self._get_s3_client().list_objects_v2(**kwargs)
+    def get_first_file(self, bucket):
+        resp = self._get_s3_client().list_objects_v2(
+            Bucket=bucket,
+            Delimiter="/"
+        )
         if "Contents" not in resp:
-            logging.info('bucket is empty')
-            return None  # bucket / prefix empty
-        first = min(obj["Key"] for obj in resp["Contents"])
-        logging.info(f"found first file: {first}")
+            logging.info("bucket is empty at root")
+            return None
+        # Only get objects directly at root (ignore subfolders)
+        root_files = [obj["Key"] for obj in resp["Contents"]]
+        if not root_files:
+            logging.info("no files in bucket root")
+            return None
+        first = min(root_files)
+        logging.info(f"found first file in root: {first}")
         return first
+
     
     def move_file(self, bucket_name: str, src_path: str, target_dir: str) -> bool:
         """

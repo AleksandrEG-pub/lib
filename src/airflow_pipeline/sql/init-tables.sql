@@ -7,3 +7,10 @@ CREATE TABLE IF NOT EXISTS bakery_deliveries (
     source_file VARCHAR(100),
     upload_timestamp TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS data_quality_checks (
+    check_id BIGSERIAL,
+    file_name VARCHAR(100),
+    is_valid boolean,
+    check_timestamp TIMESTAMP default current_timestamp
+);

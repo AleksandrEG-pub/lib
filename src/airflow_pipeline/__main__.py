@@ -22,18 +22,11 @@ for env_file in env_path.iterdir():
         logging.info(f"lading env file {env_file}")
         load_dotenv(env_file)
 
-
 def main():
-    # init sql
     logging.info('starting airflow pipeline')
     sql_service.init_sql()
-    # init data, csv -> s3
     delivery_service.init_data_from_csv()
     server.start_server()
-
-    # upload: once per 1 hour load files from s3 to postgres
-    # data quality: check loaded amount
-
 
 if __name__ == '__main__':
     main()
