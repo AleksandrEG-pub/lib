@@ -1,0 +1,18 @@
+{
+    "name": "pg-connector",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "database.hostname": "database-lib",
+        "database.port": "5432",
+        "database.user": "it_one",
+        "database.password": "it_one",
+        "database.dbname": "it_one",
+        "table.include.list": "public.flights",
+        "plugin.name": "pgoutput",
+        "topic.prefix": "it-one",
+        "transforms": "schema_version",
+        "transforms.schema_version.type": "org.apache.kafka.connect.transforms.InsertField$Value",
+        "transforms.schema_version.static.field": "schema_version",
+        "transforms.schema_version.static.value": "flight.v1"
+    }
+}
