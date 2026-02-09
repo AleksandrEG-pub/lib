@@ -27,5 +27,6 @@ CREATE TABLE IF NOT EXISTS flights_upload (
     arrival_time timestamp with time zone,
     duration_minutes INTEGER,
     aircraft_type VARCHAR(50),
-    status VARCHAR(20)
+    status VARCHAR(20),
+    uploaded_timestamp timestamp
 );
