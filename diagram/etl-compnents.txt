@@ -1,0 +1,67 @@
+sequenceDiagram
+    participant Source as Accounting Systems
+    participant Airflow as Airflow Scheduler
+    participant ETL as pyarrow ETL Task
+    participant Target as PostgreSQL (Target)
+    participant Meta as PostgreSQL (Metadata)
+    participant Logs as PostgreSQL (Logs)
+    participant Grafana as Grafana
+    participant Alert as Notification System
+
+    Note over Airflow,ETL: 1. SCHEDULING PHASE
+    Airflow->>Airflow: Check schedule
+    Airflow->>ETL: Trigger ETL job
+    
+    Note over ETL,Target: 2. EXTRACTION PHASE
+    ETL->>Source: Connect & authenticate
+    Source->>ETL: Return connection
+    ETL->>Source: Extract data (batched)
+    Source->>ETL: Stream data batches
+    
+    rect
+    Note over ETL,Logs: 3. LOGGING PROGRESS
+    ETL->>Logs: Write "Extraction started"
+    ETL->>Meta: Write job start timestamp
+    end
+    
+    Note over ETL,Target: 4. PROCESSING & LOADING
+    loop For each batch
+        ETL->>ETL: Transform with pyarrow
+        ETL->>Target: Load batch to target DB
+        ETL->>Logs: Write batch progress
+        ETL->>Meta: Update rows_loaded count
+    end
+    
+    Note over ETL,Grafana: 5. COMPLETION & METRICS
+    ETL->>Target: Commit transaction
+    ETL->>Logs: Write "Load completed"
+    ETL->>Meta: Write completion status
+    ETL->>Meta: Write total rows, duration
+    
+    Note over Airflow,Alert: 6. ORCHESTRATION FOLLOW-UP
+    ETL->>Airflow: Return success code
+    Airflow->>Meta: Update task status
+    
+    Note over Grafana,Meta: 7. MONITORING (Continuous)
+    loop Every 30 seconds
+        Grafana->>Meta: Query latest job status
+        Meta->>Grafana: Return metrics
+        Grafana->>Logs: Query recent logs
+        Logs->>Grafana: Return log entries
+        Grafana->>Grafana: Update dashboards
+    end
+    
+    Note over Airflow,Alert: 8. ALERTING (Only on failure)
+    alt Task Failed
+        Airflow->>Alert: Send failure alert
+        Alert->>Alert: Deliver to Email/Slack
+    else Task Successful
+        Note right of Alert: No alert sent
+    end
+    
+    Note over Grafana: 9. DATA QUALITY (Optional)
+    Airflow->>ETL: Trigger validation task
+    ETL->>Target: Run validation queries
+    ETL->>Meta: Write validation results
+    Grafana->>Meta: Query validation results
+    Meta->>Grafana: Return pass/fail status
