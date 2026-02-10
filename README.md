@@ -168,3 +168,6 @@ DBT creates 5 objects in database:
 
 Snapshots are dbt provided functionality for SCD2 
 
+![Dbt star](./erd/dbt-star.png "dbt star")
+
+
