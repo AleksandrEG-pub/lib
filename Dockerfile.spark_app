@@ -1,0 +1,38 @@
+FROM maven:3.9.12-eclipse-temurin-25-noble AS maven_jars
+WORKDIR /build
+COPY pom.xml .
+RUN mvn -B dependency:copy-dependencies \
+-DoutputDirectory=/deps \
+-DincludeScope=runtime
+
+FROM spark:4.0.1-python3 AS spark_base
+COPY --from=maven_jars /deps /opt/spark/jars
+
+FROM spark_base AS spark_app
+USER root
+RUN apt update && apt install -y python3.10-venv
+USER spark
+RUN python3 -m venv /opt/spark/venv/spark-venv
+ENV VIRTUAL_ENV="/opt/spark/venv/spark-venv"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN pip install debugpy==1.8.19
+RUN mkdir -p /opt/spark/app/src
+RUN mkdir -p /opt/spark/app/.pip_cache
+RUN mkdir -p /opt/spark/app/.ivy2
+ENV PIP_CACHE_DIR=/opt/spark/app/.pip_cache
+ENV IVY_HOME=/opt/spark/app/.ivy2
+WORKDIR /opt/spark/app
+COPY --chown=spark:spark pyproject.toml ./
+RUN pip install -e .
+COPY --chown=spark:spark src/ ./src/
+COPY --chown=spark:spark env/ ./env/
+
+FROM spark_app AS spark_upload
+COPY --chown=spark:spark entrypoint_spark_upload.sh .
+ENTRYPOINT ["./entrypoint_spark_upload.sh"]
+# ENTRYPOINT ["tail", "-f", "/dev/null"]
+
+FROM spark_app AS kafka_pipeline
+COPY --chown=spark:spark entrypoint_kafka_pipeline.sh .
+ENTRYPOINT ["./entrypoint_kafka_pipeline.sh"]
+# ENTRYPOINT ["tail", "-f", "/dev/null"]
