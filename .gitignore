@@ -8,7 +8,11 @@ local
 *$py.class
 *.egg-info/
 .idea
-
+.Trash*
+.pip_cache
+build
+install.sh
+bot
 src/dbt_star/logs
 src/dbt_star/star_schema/logs
 src/dbt_star/star_schema/target

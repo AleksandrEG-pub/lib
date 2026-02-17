@@ -2,18 +2,131 @@ name: it_one
 
 services:
   dbt-star:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile.dbt
 
+  airflow:
+    image: apache/airflow:3.1.7rc1-python3.13
+    command: standalone
+    environment:
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: True
+      AIRFLOW_CONN_BACKEND: http://airflow-pipeline:8080
+    ports:
+      - "10460:8080"
+    volumes:
+      - ./src/airflow_dags:/opt/airflow/dags
+
+  airflow-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: airflow_pipeline
+    ports:
+      - "10459:8080"
+      - "5678:5678"
+    env_file:
+      - path: ./env/spark.env
+        required: true
+      - path: ./env/database_docker.env
+        required: true
+
+  kafka:
+    image: apache/kafka:3.7.0
+    env_file:
+      - path: ./env/kafka_broker.env
+        required: true
+
+  kafka-connect-debezium:
+    image: debezium/connect:2.7.3.Final
+    ports:
+      - "10461:8083"      # REST API to create connectors
+    environment:
+      BOOTSTRAP_SERVERS: "kafka:9092"
+      GROUP_ID: "it-one"
+      CONFIG_STORAGE_TOPIC: "it_one_connect_configs"
+      OFFSET_STORAGE_TOPIC: "it_one_connect_offsets"
+      STATUS_STORAGE_TOPIC: "it_one_connect_status"
+      KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    depends_on:
+      - kafka
+
+  kafka-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: kafka_pipeline
+    ports:
+      - "5678:5678"
+    env_file:
+      - path: ./env/kafka.env
+        required: true
+      - path: ./env/spark.env
+        required: true
+      - path: ./env/database_docker.env
+        required: true
+
   seaweedfs:
-    image: chrislusf/seaweedfs:4.04
+    image: chrislusf/seaweedfs:4.07
     ports:
       - "10456:8333"
       - "10457:23646"
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: key
     command: "server -s3 -dir=/data"
+
+  spark-upload:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: spark_upload
     env_file:
-      - ./s3/.env
+      - path: ./env/database_docker.env
+        required: true
+      - path: ./env/spark.env
+        required: true
+      - path: ./env/s3_docker.env
+        required: true
+    depends_on:
+      - spark-master
+      - spark-worker
+    ports:
+      - "5678:5678"
+
+  spark-master:
+    # 7077:7077 api
+    # 10458:8080 ui
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: spark_base
+    command: >
+      sh -c "
+        /opt/spark/sbin/start-master.sh;
+        tail -F /opt/spark/logs/spark-spark-org.apache.spark.deploy.master*.out
+      "
+    ports:
+      - "10458:8080"
+
+  spark-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: spark_base
+    depends_on:
+      - spark-master
+    command: >
+      sh -c "
+        /opt/spark/sbin/start-worker.sh spark://spark-master:7077;
+        tail -F /opt/spark/logs/spark-spark-org.apache.spark.deploy.worker*.out
+      "
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=1G
 
   database-lib:
     image: postgres:17.5
@@ -21,13 +134,17 @@ services:
     ports:
       - "10452:5432"
     env_file:
-      - .env
+      - ./env/database.env
+    volumes:
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
 
   clickhouse:
     image: clickhouse:25.11.3.54-jammy
     restart: unless-stopped
     env_file:
-      - ./src/clickhouse/clickhouse.env
+      - path: ./env/clickhouse.env
+        required: true
     ports:
       - "10453:8123"
       - "10454:9000"

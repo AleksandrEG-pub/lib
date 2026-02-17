@@ -1,0 +1,193 @@
+from datetime import datetime, timezone
+import io
+import logging
+import os
+import pyarrow as pa
+import pyarrow.parquet as pq
+import boto3
+from botocore.client import Config
+from botocore.exceptions import ClientError
+
+
+class S3Manager:
+    def _get_s3_client(self):
+        return boto3.client('s3',
+            endpoint_url=os.getenv('S3_ENDPOINT'),
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'), 
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+            config=Config(
+                signature_version='s3v4',
+                s3={'addressing_style': 'path'}
+            )
+        )
+    
+    def init_bucket_boto(self, bucket_name: str):
+        s3_client = self._get_s3_client()
+        try:
+            s3_client.head_bucket(Bucket=bucket_name)
+            logging.info(f"bucket {bucket_name} exist")
+            return
+        except ClientError as e:
+            code = e.response["Error"]["Code"]
+            if code in ("404", "NoSuchBucket"):
+                logging.info(f"bucket {bucket_name} not exist")
+                s3_client.create_bucket(Bucket=bucket_name)
+                logging.info(f"Bucket '{bucket_name}' created")
+            else:
+                raise
+
+    def write_as_parquet(self, bucket_name: str, file_name: str, content: pa.Table):
+        buf = io.BytesIO()
+        pq.write_table(content, buf)
+        buf.seek(0)
+        self._get_s3_client().upload_fileobj(
+            buf,
+            bucket_name,
+            file_name
+        )
+        logging.info(f"uploaded file {file_name} to bucket {bucket_name}")
+
+
+    def read_parquet(self, bucket_name: str, file_name: str) -> pa.Table:
+        """Read Parquet file from S3 and return pyarrow Table"""
+        buf = io.BytesIO()
+        self._get_s3_client().download_fileobj(bucket_name, file_name, buf)
+        buf.seek(0)
+        table = pq.read_table(buf)
+        return table
+
+    def get_first_file(self, bucket):
+        resp = self._get_s3_client().list_objects_v2(
+            Bucket=bucket,
+            Delimiter="/"
+        )
+        if "Contents" not in resp:
+            logging.info("bucket is empty at root")
+            return None
+        # Only get objects directly at root (ignore subfolders)
+        root_files = [obj["Key"] for obj in resp["Contents"]]
+        if not root_files:
+            logging.info("no files in bucket root")
+            return None
+        first = min(root_files)
+        logging.info(f"found first file in root: {first}")
+        return first
+
+    
+    def move_file(self, bucket_name: str, src_path: str, target_dir: str) -> bool:
+        """
+        Move a file within the same bucket from src_path to target directory
+        Adds timestamp prefix to avoid filename collisions
+        
+        Args:
+            bucket_name: Name of the S3 bucket
+            src_path: Source file path in bucket (e.g., 'folder/file.txt')
+            target_dir: Target directory path (e.g., 'processed/')
+                       Must end with '/'
+        
+        Returns:
+            bool: True if move successful, False otherwise
+        
+        Examples:
+            move_file('my-bucket', 'uploads/file.txt', 'processed/')
+            # Moves to 'processed/20250115_143045_file.txt'
+            
+            move_file('my-bucket', 'data/report.pdf', 'archived/')
+            # Moves to 'archived/20250115_143045_report.pdf'
+        """
+        try:
+            # 1. Validate inputs
+            if not target_dir.endswith('/'):
+                raise ValueError("target_dir must end with '/' (e.g., 'processed/')")
+            # 2. Normalize paths
+            src_path = src_path.strip('/')
+            target_dir = target_dir.rstrip('/') + '/'  # Ensure single trailing slash
+            # 3. Extract filename and generate new name with timestamp
+            src_filename = os.path.basename(src_path)
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            # Add timestamp prefix (not suffix) to maintain file extension
+            new_name = f"{timestamp}_{src_filename}"
+            target_key = f"{target_dir}{new_name}"
+            logging.info(f"Moving: {src_path} -> {target_key}")
+            # 4. Check if source file exists
+            try:
+                self._get_s3_client().head_object(Bucket=bucket_name, Key=src_path)
+            except ClientError as e:
+                if e.response['Error']['Code'] == '404':
+                    logging.info(f"Source file {src_path} not found in bucket {bucket_name}")
+                    return False
+                raise
+            # 5. Check if target already exists (unlikely with timestamp but safe)
+            try:
+                self._get_s3_client().head_object(Bucket=bucket_name, Key=target_key)
+                logging.info(f"Warning: Target file {target_key} already exists, overwriting")
+            except ClientError:
+                pass  # Target doesn't exist, which is expected
+            # 6. Copy object to new location
+            copy_source = {
+                'Bucket': bucket_name,
+                'Key': src_path
+            }
+            self._get_s3_client().copy_object(
+                Bucket=bucket_name,
+                CopySource=copy_source,
+                Key=target_key
+            )
+            logging.info(f"Copied to: {target_key}")
+            # 7. Delete original file
+            self._get_s3_client().delete_object(
+                Bucket=bucket_name,
+                Key=src_path
+            )
+            logging.info(f"Deleted original: {src_path}")
+            logging.info(f"Successfully moved {src_path} to {target_key}")
+            return True
+        except ValueError as e:
+            logging.error(f"Validation error: {str(e)}")
+            return False
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_msg = e.response['Error']['Message']
+            logging.error(f"S3 Error ({error_code}): {error_msg}")
+            return False
+        except Exception as e:
+            logging.error(f"Unexpected error: {str(e)}")
+            return False
+
+
+    def list_files_in_directory(self, bucket_name, directory_prefix):
+        """
+        List files in a specific directory in an S3 bucket
+        
+        Args:
+            bucket_name (str): Name of the S3 bucket
+            directory_prefix (str): Directory path (e.g., 'dir1/' or 'folder/subfolder/')
+        
+        Returns:
+            list: List of file keys/paths in the directory
+        """
+        s3_client = self._get_s3_client()
+        # Ensure directory_prefix ends with '/'
+        if not directory_prefix.endswith('/'):
+            directory_prefix += '/'
+        try:
+            # List objects with the given prefix
+            response = s3_client.list_objects_v2(
+                Bucket=bucket_name,
+                Prefix=directory_prefix
+            )
+            if 'Contents' not in response:
+                return []
+            # Extract file paths (excluding the directory itself)
+            files = []
+            for obj in response['Contents']:
+                # Skip the directory itself if it appears as an object
+                if obj['Key'] != directory_prefix:
+                    files.append(obj['Key'])
+            return files
+        except ClientError as e:
+            print(f"Error accessing bucket: {e}")
+            return []
+
+
+s3manager: S3Manager = S3Manager()
