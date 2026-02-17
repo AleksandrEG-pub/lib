@@ -1,0 +1,11 @@
+delivery_id,item_type,quantity,price_per_unit,manufacture_datetime
+DEL-004,croissant,32,2.50,2024-01-18 03:45:00
+DEL-004,multigrain_bread,20,4.50,2024-01-18 02:30:00
+DEL-004,lemon_tart,22,4.25,2024-01-18 05:15:00
+DEL-004,apple_turnover,28,3.00,2024-01-18 05:45:00
+DEL-004,almond_croissant,18,3.50,2024-01-18 04:30:00
+DEL-004,rye_bread,12,4.25,2024-01-18 03:15:00
+DEL-004,pumpkin_muffin,36,3.00,2024-01-18 06:00:00
+DEL-004,blueberry_scone,40,2.75,2024-01-18 06:15:00
+DEL-004,chocolate_muffin,38,3.25,2024-01-18 04:00:00
+DEL-004,baguette,24,3.50,2024-01-18 03:00:00
