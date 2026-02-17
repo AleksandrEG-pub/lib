@@ -1,6 +1,31 @@
 name: it_one
 
 services:
+  airflow:
+    image: apache/airflow:3.1.7rc1-python3.13
+    command: standalone
+    environment:
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: True
+      AIRFLOW_CONN_BACKEND: http://airflow-pipeline:8080
+    ports:
+      - "10460:8080"
+    volumes:
+      - ./src/airflow_dags:/opt/airflow/dags
+    
+  airflow-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark_app
+      target: airflow_pipeline
+    ports:
+      - "10459:8080"
+      - "5678:5678"
+    env_file:
+      - path: ./env/spark.env
+        required: true
+      - path: ./env/database_docker.env
+        required: true
+
   kafka:
     image: apache/kafka:3.7.0
     env_file:
@@ -23,10 +48,13 @@ services:
         required: true
 
   seaweedfs:
-    image: chrislusf/seaweedfs:4.04
+    image: chrislusf/seaweedfs:4.07
     ports:
       - "10456:8333"
       - "10457:23646"
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: key
     command: "server -s3 -dir=/data"
 
   spark-upload:
