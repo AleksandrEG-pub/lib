@@ -32,6 +32,23 @@ services:
       - path: ./env/kafka_broker.env
         required: true
 
+  kafka-connect-debezium:
+    image: debezium/connect:2.7.3.Final
+    ports:
+      - "10461:8083"      # REST API to create connectors
+    environment:
+      BOOTSTRAP_SERVERS: "kafka:9092"
+      GROUP_ID: "it-one"
+      CONFIG_STORAGE_TOPIC: "it_one_connect_configs"
+      OFFSET_STORAGE_TOPIC: "it_one_connect_offsets"
+      STATUS_STORAGE_TOPIC: "it_one_connect_status"
+      KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    depends_on:
+      - kafka
+
   kafka-pipeline:
     build:
       context: .
@@ -113,6 +130,9 @@ services:
       - "10452:5432"
     env_file:
       - ./env/database.env
+    volumes:
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
 
   clickhouse:
     image: clickhouse:25.11.3.54-jammy

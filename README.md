@@ -210,9 +210,9 @@ Required ports:
 
 Kafka presented as single node cluster.
 
-Start required sevices:
+Start required services:
 ```
-./start-database.sh && ./start-spark.sh && ./start-kafka.sh
+./start-database.sh && ./start-spark.sh && ./start-kafka.sh && ./start-kafka-connect.sh
 ```
 
 Spark application executed in extra container:
@@ -224,17 +224,21 @@ Kafka configuration is in
 ```
 ./env/kafka.env
 ./env/kafka_broker.env
+./env/kafka_connect_postgres.json
 ```
 
-For convinience, topic created automatically, ttl set to 5 minutes
+For convenience, topic created automatically, ttl set to 5 minutes
 
 Module executes as a spark application in spark container.
 Kafka-pipeline application:
 - creates tables from ./sql/init-tables.sql in postgres: 'flights', 'flights_upload'
+- initializes connector in kafka connect
 - populates table flight from data in ./data/flights.csv
-- python-kafka move data from table 'flights' to kafka topic 'it-one'
-- spark application moves data from topic 'it-one' to table 'flights_upload'
-- failed messages written to dead letter queue 'it-one.dlq'
+- CDC with Debezium automatically moves all updates from table 'flights' to topic 'it-one.public.flights' 
+- spark application moves data from topic 'it-one.public.flights' to table 'flights_upload'
+- failed messages written to dead letter queue 'it-one.dlq' 
+- - all flight with schema_version other than 'flight.v1'
+- - all flights with flight_number starting with 'A' considered incorrect
 
 Result of uploading can be observed by:
 ```
@@ -245,9 +249,11 @@ select * from flights;
 select * from flights_upload;
 
 # kafka
-docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one --group console --from-beginning
-docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.dlq --group console --from-beginning
 ```
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.public.flights --group console --from-beginning
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.public.flights.dlq --group console --from-beginning
+```
+
 
 
 ### Airflow, week 9

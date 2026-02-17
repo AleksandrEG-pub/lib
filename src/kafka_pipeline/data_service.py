@@ -7,7 +7,6 @@ import pandas as pd
 from sqlalchemy import Tuple
 from pyspark.sql import SparkSession
 import database.database_connection as dc
-import kafka_pipeline.kafka_service as ks
 from kafka_pipeline.spark_service import spark_service
 from pyspark.sql.dataframe import DataFrame
 import pyspark.sql.functions as sf
@@ -41,8 +40,9 @@ class Schemes():
             st.StructField("booked_first_class", st.IntegerType()),
         ])
         self.kafka_message_type = st.StructType([
-            st.StructField("schema", st.StringType()),
-            st.StructField("data", flights_data_type)
+            st.StructField("payload", st.StructType([
+                st.StructField("after", flights_data_type),
+            ])),
         ])
         self.json_parse_type = st.StructType([
             st.StructField("parsed", st.StringType()),
@@ -80,37 +80,6 @@ def init_data():
     logging.info("uploaded data from csv to table 'flights'")
 
 
-def upload_from_database_to_kafka():
-    '''
-    Upload data from 'flights' table to kafka 'it-one' topic using database cursor.
-    Each row converted to json.
-    
-    Use on big data with caution, because it collects send task's futures, which can
-    take significant memory if tables are big 
-    '''
-    logging.info("uploading data from postgres to kafka")
-    send_futures = []
-    with dc.db.cursor() as cursor:
-        cursor.execute("SELECT * FROM flights")
-        columns = [c[0] for c in cursor.description]
-        for row in cursor.fetchall():
-            message = {
-                "schema": "flight.v1",
-                "data": dict(zip(columns, row))
-            }
-            json_message = json.dumps(message, default=str)
-            future = ks.kafka_service.send_to_server(
-                json_message.encode("utf-8"))
-            send_futures.append(future)
-    timeout_seconds = 30
-    for future in send_futures:
-        try:
-            future.get(timeout=timeout_seconds)
-        except Exception as e:
-            logging.error(f"Failed to send message: {e}")
-    logging.info("uploaded data from postgres to kafka")
-
-
 @sf.udf(returnType=schemes.json_parse_type)
 def _parse_json(kafka_message):
     '''
@@ -119,14 +88,17 @@ def _parse_json(kafka_message):
     Check if message has correct schema version
     '''
     json_binary = kafka_message['value']
+    if json_binary is None:
+        return (None, "value is none")
     message_payload_str = json_binary.decode("utf-8")
     try:
         message_payload_json = json.loads(message_payload_str)
-        immitate_wrong_version = str(message_payload_json['data']['flight_number']).find("A") > 0
-        if message_payload_json.get('schema') == 'flight.v1' and immitate_wrong_version:
-            return (message_payload_str, None)
+        immitate_wrong_version = str(message_payload_json['payload']['after']['flight_number']).startswith("A")
+        schema_version = message_payload_json['payload']['schema_version']
+        if schema_version != 'flight.v1' or immitate_wrong_version:
+            return (None, f"unexpected version: {schema_version}. Expected: [flight.v1]")
         else:
-            return (None, f"unexpected version: {message_payload_json['schema']}. Expected: [flight.v1]")
+            return (message_payload_str, None)
     except Exception as e:
         return (None, f"error processing: {str(e)}")
 
@@ -158,7 +130,7 @@ def sink_from_kafka_to_database():
     df: DataFrame = (spark.readStream
                      .format("kafka")
                      .option("kafka.bootstrap.servers", os.getenv('BOOTSTRAP_SERVER'))
-                     .option("subscribe", "it-one")
+                     .option("subscribe", "it-one.public.flights")
                      .option("startingOffsets", "earliest")
                      .load()
                      .withColumn('original_message', s_struct('*'))
@@ -168,8 +140,10 @@ def sink_from_kafka_to_database():
     df_messages = (df.filter(sf.col('json_parse_result.parsed').isNotNull())
                    .withColumn('kafka_message',
                                sf.from_json(sf.col('json_parse_result.parsed'), schema=schemes.kafka_message_type))
-                   .select("kafka_message.data.*").alias('flight_data')
-                   .select(*(schemes.flights_upload_properties)))
+                   .select("kafka_message.payload.after.*").alias('flight_data')
+                   .select(*(schemes.flights_upload_properties))
+                   .withColumn("uploaded_timestamp", sf.current_timestamp()) # for the task, upload timestamp
+                   )
     df_messages.writeStream.foreachBatch(_write_to_sql).start()
     logging.info("finished upload to 'flights_upload' table")
 
@@ -177,12 +151,13 @@ def sink_from_kafka_to_database():
                 .withColumn('reason_in_dlq', sf.col('json_parse_result.error'))
                 .select(sf.to_json(sf.struct("original_message", "reason_in_dlq")).alias('value'))
                 )
+    
     (df_error.writeStream
-     .format("kafka")
-     .option("kafka.bootstrap.servers", os.getenv('BOOTSTRAP_SERVER'))
-     .option("topic", "it-one.dlq")
-     .option("checkpointLocation", "/tmp/checkpoint/it-one-dlq")
-     .start()
-     .awaitTermination(timeout=30)
+        .format("kafka")
+        .option("kafka.bootstrap.servers", os.getenv('BOOTSTRAP_SERVER'))
+        .option("topic", "it-one.dlq")
+        .option("checkpointLocation", "/tmp/checkpoint/it-one-dlq")
+        .start()
+        .awaitTermination(timeout=30) # for continious streaming remove timeout or set much bigger
      )
     logging.info("finished sending messages to dlq")

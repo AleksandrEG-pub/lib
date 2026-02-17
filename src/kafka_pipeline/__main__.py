@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import kafka_pipeline.data_service as data_service
 import kafka_pipeline.sql_service as sql_service
+import kafka_pipeline.kafka_connect_service as kafka_connect_service
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 env_path = Path(__file__).resolve().parents[2] / "env"
@@ -18,8 +19,8 @@ for env_file in env_path.iterdir():
 
 def main():
     sql_service.init_sql()
+    kafka_connect_service.init_connector()
     data_service.init_data()
-    data_service.upload_from_database_to_kafka()
     data_service.sink_from_kafka_to_database()
 
 if __name__ == '__main__':
