@@ -1,6 +1,11 @@
 name: it_one
 
 services:
+  dbt-star:
+    build:
+      context: .
+      dockerfile: Dockerfile.dbt
+
   airflow:
     image: apache/airflow:3.1.7rc1-python3.13
     command: standalone
@@ -11,7 +16,7 @@ services:
       - "10460:8080"
     volumes:
       - ./src/airflow_dags:/opt/airflow/dags
-    
+
   airflow-pipeline:
     build:
       context: .
@@ -95,7 +100,7 @@ services:
   spark-master:
     # 7077:7077 api
     # 10458:8080 ui
-    build:  
+    build:
       context: .
       dockerfile: Dockerfile.spark_app
       target: spark_base
@@ -106,7 +111,7 @@ services:
       "
     ports:
       - "10458:8080"
-      
+
   spark-worker:
     build:
       context: .

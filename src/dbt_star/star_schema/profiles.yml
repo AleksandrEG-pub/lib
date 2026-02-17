@@ -1,0 +1,12 @@
+star_schema:
+  outputs:
+    dev:
+      dbname: it_one
+      host: database-lib
+      pass: it_one
+      port: 5432
+      schema: public
+      threads: 1
+      type: postgres
+      user: it_one
+  target: dev
