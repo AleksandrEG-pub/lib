@@ -19,6 +19,7 @@ clickhouse = "clickhouse:main"
 s3 = "s3_upload:main"
 spark = "spark_upload:main"
 kafka = "kafka_pipeline:main"
+ci_cd = "ci_cd:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

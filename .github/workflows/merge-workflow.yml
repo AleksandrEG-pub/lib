@@ -30,4 +30,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - run: echo 'deploying'
+      - name: Deploy
+        run: |
+          echo 'deploying'
+          docker compose --file ./docker-compose.yaml up --force-recreate --build -d ci-cd
