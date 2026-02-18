@@ -327,3 +327,44 @@ If any upload or check failed, then send failure notification:
 
 Ideally, notificaiton server be separated from pipeline server.
 
+### CI CD, week 11
+
+#### ports
+Required ports on host:
+- 10452 - postgres
+
+#### setup
+Start required services:
+```
+./start-database.sh
+```
+
+#### application description:
+
+Application is migration script:
+```
+src/ci_cd/sql_service.py#migrate_data
+```
+
+Application initialization steps:
+1. creates tables from ./sql/init-tables.sql in postgres: 
+- 5 'raw' tables
+- 5 'data warehouse' tables
+2. upload files from 'raw' to 'data warehouse' tables enriching data with
+'record_source' and 'loaded_date' columns
+
+#### ci cd
+Introduced CI CD and backed by GitHub Actions, using self-hosted runners.
+Workflow configurations are in:
+```
+.github/workflows/merge-workflow.yml
+.github/workflows/push-workflow.yml
+```
+*push-workflow.yml* works only for 'ci-cd-test' branch. Performs testing of the branch for each push 'ci-cd-test' branch.
+
+*merge-workflow.yml* works only for 'ci-cd' branch, Performs testing of the branch for each push 'ci-cd' branch with following deploy (docker compose deploy).
+
+
+
+
+
