@@ -1,0 +1,31 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - ci-cd-test
+
+jobs:
+  test:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install .
+          pip install -r ./dependencies/simple-libs.txt
+          pip install -r ./dependencies/sql.txt
+          pip install -r ./dependencies/table-frameworks.txt
+          pip install -r ./dependencies/test.txt
+      - name: test
+        run: |
+          source .venv/bin/activate 
+          pytest
+      - name: Cleanup
+        if: always()
+        run: |
+          git reset --hard
+          git clean -fdx
