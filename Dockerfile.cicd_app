@@ -1,0 +1,20 @@
+FROM python:3.12.12
+RUN mkdir -p /app/src
+RUN mkdir -p /app/env
+WORKDIR /app
+RUN python3 -m venv /app/venv
+ENV VIRTUAL_ENV="/app/venv"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+COPY pyproject.toml ./
+RUN pip install -e .
+COPY ./dependencies/table-frameworks.txt ./dependencies/table-frameworks.txt
+RUN pip install -r ./dependencies/table-frameworks.txt
+COPY ./dependencies/simple-libs.txt ./dependencies/simple-libs.txt
+RUN pip install -r ./dependencies/simple-libs.txt
+COPY ./dependencies/sql.txt ./dependencies/sql.txt
+RUN pip install -r ./dependencies/sql.txt
+COPY ./dependencies/test.txt ./dependencies/test.txt
+RUN pip install -r ./dependencies/test.txt
+COPY ./src/ ./src/
+COPY env/ ./env/
+ENTRYPOINT ["python", "-m", "ci_cd"]

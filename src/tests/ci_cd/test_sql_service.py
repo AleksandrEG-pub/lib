@@ -9,8 +9,10 @@ def test_construct_sql():
         target_columns=["colA", "colB"]
     )
     expected_sql = """
-    INSERT INTO target_tbl (colA, colB)
-    SELECT col1, col2
+    INSERT INTO target_tbl (colA, colB, loaded_date, record_source)
+    SELECT col1, col2,
+      current_timestamp as loaded_date,
+      'raw-tables' as record_source
     FROM source_tbl
     """
     assert _construct_sql(mapping) == expected_sql
