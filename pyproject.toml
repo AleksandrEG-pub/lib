@@ -7,6 +7,8 @@ name = "data_migrations"
 version = "0.0.1"
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = [
+]
 
 [project.scripts]
 library = "library.lib:main"
@@ -17,12 +19,14 @@ clickhouse = "clickhouse:main"
 s3 = "s3_upload:main"
 spark = "spark_upload:main"
 kafka = "kafka_pipeline:main"
+ci_cd = "ci_cd:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
 [tool.setuptools.package-data]
 airflow_pipeline = ["sql/*.sql", "data/*"]
+ci_cd = ["sql/*.sql"]
 kafka_pipeline = ["sql/*.sql", "data/*"]
 spark_upload = ["sql/*.sql", "data/*"]
 s3_upload = ["sql/*.sql"]

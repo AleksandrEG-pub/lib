@@ -1,6 +1,11 @@
 name: it_one
 
 services:
+  ci-cd:
+    build:
+      context: .
+      dockerfile: Dockerfile.cicd_app
+
   airflow:
     image: apache/airflow:3.1.7rc1-python3.13
     command: standalone

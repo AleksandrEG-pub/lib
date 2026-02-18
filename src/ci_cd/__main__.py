@@ -6,7 +6,7 @@ from ci_cd import sql_service
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
 
 env_path = Path(__file__).resolve().parents[2] / "env"
-required_envs = ['database.env',]
+required_envs = ['database_docker.env',]
 
 for env_file in env_path.iterdir():
     if env_file.name in required_envs:
@@ -14,14 +14,9 @@ for env_file in env_path.iterdir():
         load_dotenv(env_file)
 
 def main():
-    # import 5 tables
     sql_service.init_tables()
     sql_service.init_data()
-    # airflow to trigger etl on pyarrow
-    # 2 environments: master, test
-    # in test: code + test + configuration
-    # pull request to master + code review
-    pass
+    sql_service.migrate_data()
 
 if __name__ == "__main__":
     main()
