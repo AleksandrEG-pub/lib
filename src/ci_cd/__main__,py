@@ -17,11 +17,11 @@ def main():
     # import 5 tables
     sql_service.init_tables()
     sql_service.init_data()
+    sql_service.migrate_data()
     # airflow to trigger etl on pyarrow
     # 2 environments: master, test
     # in test: code + test + configuration
     # pull request to master + code review
-    pass
 
 if __name__ == "__main__":
     main()
