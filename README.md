@@ -41,6 +41,8 @@ Project split on modules:
   - kafka_pipeline
 - week 9
   - airflow_pipeline
+- week 11
+  - ci_cd
 
 Main execution scripts: 
 ```
@@ -53,6 +55,7 @@ python ./src/s3_upload/__main__.py
 python ./src/spark_upload/__main__.py
 python ./src/kafka_pipeline/__main__.py
 python ./src/airflow_pipeline/__main__.py
+python ./src/ci_cd/__main__.py
 ```
 
 ### Week 3. Data generation
@@ -248,9 +251,10 @@ psql --user it_one
 select * from flights;
 select * from flights_upload;
 
-# kafka
-```
+# kafka 
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.public.flights --group console --from-beginning
+
+# kafka dlq
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.public.flights.dlq --group console --from-beginning
 ```
 
@@ -276,6 +280,7 @@ Airflow application executed in extra container:
 ```
 
 #### application description:
+
 Application is a HTTP server with following endpoints:
 - POST /upload                  triggers upload files from s3 to postgres
 - GET /validate-last-upload     triggers check for last uploaded file
