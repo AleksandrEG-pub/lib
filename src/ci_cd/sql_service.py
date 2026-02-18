@@ -45,8 +45,10 @@ class MigrateMapping:
 
 def _construct_sql(mapping: MigrateMapping):
     return f"""
-    INSERT INTO {mapping.target_table} ({", ".join(mapping.target_columns)})
-    SELECT {", ".join(mapping.source_columns)}
+    INSERT INTO {mapping.target_table} ({", ".join(mapping.target_columns)}, loaded_date, record_source)
+    SELECT {", ".join(mapping.source_columns)},
+      current_timestamp as loaded_date,
+      'raw-tables' as record_source
     FROM {mapping.source_table}
     """
 
@@ -70,8 +72,8 @@ def _get_mappings():
         MigrateMapping(
             source_table="products_raw",
             target_table="products",
-            source_columns=['customer_id', 'category_id'],
-            target_columns=['customer_id', 'category_id'],
+            source_columns=['product_id', 'category_id'],
+            target_columns=['product_id', 'category_id'],
         ),
         MigrateMapping(
             source_table="orders_raw",
@@ -95,4 +97,6 @@ def _get_mappings():
 
 def migrate_data():
     for mapping in _get_mappings():
+        logging.info(f"moving data from {mapping.source_table} to {mapping.target_table}")
         _move_from_table_to_table(mapping)
+        logging.info(f"finished moving data from {mapping.source_table} to {mapping.target_table}")
