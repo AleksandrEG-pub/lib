@@ -41,9 +41,9 @@ The ETL process loads entire tables or large result sets into memory before writ
 
 | Solution / Tool | Effort | Requirement addressed | Notes |
 | --- | --- | --- | --- |
-| DB cursor + batching | 1 | ETL-001 | Server-side cursors with `fetchmany` keep memory usage flat              |
-| pyarrow | 1–2 | ETL-001 | Columnar streaming with predictable memory behavior                      |
-| pandas (chunksize) | 1–2 | ETL-001 | Works but higher per-batch memory overhead                               |
+| DB cursor + batching | 1 | ETL-001 | Server-side cursors with `fetchmany` keep memory usage flat |
+| pyarrow | 1–2 | ETL-001 | Columnar streaming with predictable memory behavior |
+| pandas (chunksize) | 1–2 | ETL-001 | Works but higher per-batch memory overhead |
 | Spark | 3–5 | ETL-001 | Technically solves the issue but adds unnecessary operational complexity |
 
 ---
@@ -102,8 +102,8 @@ Even when logs exist, there is no mechanism to summarize progress or detect anom
 
 | Solution / Tool | Effort | Requirement addressed | Notes |
 | --- | --- | --- | --- |
-| SQL views / queries | 1 | ETL-002 | Aggregate failures, durations, throughput              |
-| Grafana dashboards | 1 | ETL-002 | Visual monitoring of ETL health                        |
+| SQL views / queries | 1 | ETL-002 | Aggregate failures, durations, throughput |
+| Grafana dashboards | 1 | ETL-002 | Visual monitoring of ETL health |
 | Airflow scheduled checks | 1 | ETL-002 | Periodically execute analytical SQL and act on results |
 
 > Note: Airflow is used only for scheduling checks, not for performing aggregation or analysis itself.
@@ -196,7 +196,8 @@ Based on data from cause sections the following components are selected:
    - notifications for fail / success task results
 
 
-![ETL pipeline](./diagram/etl-components.png "ETL pipeline")
+![ETL pipeline](./diagram/etl-components-overview.png "ETL pipeline overview")
+![ETL pipeline](./diagram/etl-components.png "ETL flowchart")
 
 ## Risks
 | Risk | Impact | Probability | Mitigation Strategy |
@@ -206,10 +207,9 @@ Based on data from cause sections the following components are selected:
 | Single Point of Failure (Airflow) | High | Low | Implement health checks and auto-restart, Maintain manual fallback scripts, Use Airflow High Availability mode |
 
 
-
 ## Alternative Component Selection (Higher Resources).
 
-Heavy maitenance, scalability, learning curve. Recommended for heavy load.
+Heavy maintenance, scalability, learning curve. Recommended for heavy load.
 
 | Component | Category | Effort |  Why It's Better | Key Benefits |
 |-----------|----------|-----------------|--------|--------------|
@@ -219,3 +219,18 @@ Heavy maitenance, scalability, learning curve. Recommended for heavy load.
 | ClickHouse | Log/Metrics Storage | 1-2 | Columnar storage optimized for analytics, sub-second queries | Handles high-volume logging, enables complex ad-hoc queries on logs |
 | dbt | Data Quality & Transformation | 1-2 | Declarative data quality, version-controlled tests, documentation | Production-grade data quality framework, reusable validation patterns |
 | Kafka | Streaming Platform | 3-5 | Enterprise-grade Kafka with Schema Registry, KSQL, Connect | Full streaming ecosystem, schema management, stream processing |
+
+## CI CD
+
+CD depends on project's environment.
+
+As example suggested GitHub Actions with self-hosted runners which provides simple solution for any environment.
+
+Suggested solutions based on environment:
+- kuberneetes: git-sync
+- docker: github actions + volume mount
+- VM: github actions + NFS mount
+- bare server: github actions + copy to dag airflow's directory
+
+
+![ETL pipeline](./diagram/etl-components.png "ETL flowchart")
