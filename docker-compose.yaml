@@ -152,8 +152,8 @@ services:
     ports:
       - "10455:3000"
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
-      - ./grafana/grafana.ini:/usr/local/etc/grafana/grafana.ini
+      - ./grafana/clickhouse/provisioning:/etc/grafana/provisioning
+      - ./grafana/clickhouse/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/clickhouse/grafana.ini:/usr/local/etc/grafana/grafana.ini
     depends_on:
       - clickhouse
