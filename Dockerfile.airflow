@@ -1,0 +1,11 @@
+FROM apache/airflow:2.8.1-python3.10
+COPY ./dependencies/sql.txt  ./dependencies/sql.txt 
+RUN pip install -r ./dependencies/sql.txt --no-cache-dir
+COPY --chown=spark:spark ./dependencies/table-frameworks.txt ./dependencies/table-frameworks.txt
+RUN pip install -r ./dependencies/table-frameworks.txt --no-cache-dir
+COPY ./dependencies/simple-libs.txt  ./dependencies/simple-libs.txt 
+RUN pip install -r ./dependencies/simple-libs.txt --no-cache-dir
+COPY pyproject.toml ./
+RUN pip install -e .
+COPY src/ ./src/
+COPY env/ ./env/
