@@ -17,6 +17,7 @@ clickhouse = "clickhouse:main"
 s3 = "s3_upload:main"
 spark = "spark_upload:main"
 kafka = "kafka_pipeline:main"
+deploy = "deploy:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -26,6 +27,7 @@ airflow_pipeline = ["sql/*.sql", "data/*"]
 kafka_pipeline = ["sql/*.sql", "data/*"]
 spark_upload = ["sql/*.sql", "data/*"]
 s3_upload = ["sql/*.sql"]
+deploy = ["sql/*.sql"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

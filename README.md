@@ -249,7 +249,7 @@ select * from flights;
 select * from flights_upload;
 
 # kafka
-```
+
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.public.flights --group console --from-beginning
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server http://localhost:9092 --topic it-one.public.flights.dlq --group console --from-beginning
 ```
@@ -321,4 +321,9 @@ If any upload or check failed, then send failure notification:
 ```[upload_from_s3_to_postgres, upload_check] >> notify_failure```
 
 Ideally, notificaiton server be separated from pipeline server.
+
+## Deploy, week 12
+
+
+
 
