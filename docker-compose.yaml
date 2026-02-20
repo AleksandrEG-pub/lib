@@ -148,7 +148,7 @@ services:
     image: grafana/grafana:12.3.0-18765596677-ubuntu
     restart: unless-stopped
     env_file:
-      - ./grafana/.env
+      - ./grafana/clickhouse/.env
     ports:
       - "10455:3000"
     volumes:

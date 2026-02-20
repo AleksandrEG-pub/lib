@@ -2,19 +2,23 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15
+    restart: unless-stopped
     environment: 
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes: 
       - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "10452:5432"
 
   airflow:
     build:       
       context: .      
       dockerfile: Dockerfile.airflow
+    restart: unless-stopped
     ports: 
-      - 8080:8080
+      - 10460:8080
     environment:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
     volumes:
@@ -27,10 +31,10 @@ services:
     image: grafana/grafana:12.3.0-18765596677-ubuntu
     restart: unless-stopped
     env_file:
-      - ./grafana/.env
+      - ./grafana/deploy/.env
     ports:
       - "10455:3000"
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
-      - ./grafana/grafana.ini:/usr/local/etc/grafana/grafana.ini
+      - ./grafana/deploy/provisioning:/etc/grafana/provisioning
+      - ./grafana/deploy/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/deploy/grafana.ini:/usr/local/etc/grafana/grafana.ini
