@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS raw_employees (
     employee_id BIGINT,
     name VARCHAR(100),
-    age INTEGER,
+    age VARCHAR(5),
     city VARCHAR(100),
-    salary DECIMAL(10,2),
+    salary VARCHAR(15),
     loaded_at TIMESTAMP,
     record_source VARCHAR(100)
 );
