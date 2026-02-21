@@ -1,11 +1,10 @@
-FROM apache/airflow:2.8.1-python3.10
-COPY ./dependencies/sql.txt  ./dependencies/sql.txt 
-RUN pip install -r ./dependencies/sql.txt --no-cache-dir
-COPY --chown=spark:spark ./dependencies/table-frameworks.txt ./dependencies/table-frameworks.txt
-RUN pip install -r ./dependencies/table-frameworks.txt --no-cache-dir
-COPY ./dependencies/simple-libs.txt  ./dependencies/simple-libs.txt 
-RUN pip install -r ./dependencies/simple-libs.txt --no-cache-dir
-COPY pyproject.toml ./
-RUN pip install -e .
-COPY src/ ./src/
-COPY env/ ./env/
+FROM apache/airflow:3.1.7rc1-python3.13
+RUN mkdir -p /opt/airflow/dependencies
+WORKDIR /opt/airflow/dependencies
+COPY --chown=airflow:airflow ./dependencies/sql.txt  ./sql.txt 
+RUN pip install -r ./sql.txt --no-cache-dir
+COPY --chown=airflow:airflow ./dependencies/table-frameworks.txt ./table-frameworks.txt
+RUN pip install -r ./table-frameworks.txt --no-cache-dir
+COPY --chown=airflow:airflow ./dependencies/simple-libs.txt  ./simple-libs.txt 
+RUN pip install -r ./simple-libs.txt --no-cache-dir
+ENTRYPOINT ["airflow", "standalone"]

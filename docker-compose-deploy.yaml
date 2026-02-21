@@ -1,14 +1,13 @@
-version: '3.8'
+name: it_one_deploy
+
 services:
   postgres:
     image: postgres:15
     restart: unless-stopped
     environment: 
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes: 
-      - ./data/postgres:/var/lib/postgresql/data
+      POSTGRES_USER: it_one
+      POSTGRES_PASSWORD: it_one
+      POSTGRES_DB: it_one
     ports:
       - "10452:5432"
 
@@ -20,13 +19,13 @@ services:
     ports: 
       - 10460:8080
     environment:
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://it_one:it_one@postgres:5432/it_one
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: True
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
+      - ./src/deploy/airflow/dags:/opt/airflow/dags
     depends_on:
       - postgres
-  
+
   grafana:
     image: grafana/grafana:12.3.0-18765596677-ubuntu
     restart: unless-stopped
@@ -38,3 +37,13 @@ services:
       - ./grafana/deploy/provisioning:/etc/grafana/provisioning
       - ./grafana/deploy/dashboards:/var/lib/grafana/dashboards
       - ./grafana/deploy/grafana.ini:/usr/local/etc/grafana/grafana.ini
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.07
+    ports:
+      - "10456:8333"
+      - "10457:23646"
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: key
+    command: "server -s3 -dir=/data"
