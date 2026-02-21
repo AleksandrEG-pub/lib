@@ -20,6 +20,7 @@ services:
       - 10460:8080
     environment:
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://it_one:it_one@postgres:5432/it_one
+      AIRFLOW_CONN_IT_ONE_POSTGRES_CONNECTION: 'postgres://it_one:it_one@postgres:5432/it_one'
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: True
     volumes:
       - ./src/deploy/airflow/dags:/opt/airflow/dags
