@@ -4,7 +4,7 @@ from airflow.sdk import DAG, task
 from modules import env_manager
 from modules.create_source_data import create_source_data
 
-with DAG(dag_id="source_data",
+with DAG(dag_id="create_source_data",
          start_date=datetime(2025, 1, 1),
          schedule=None,
          catchup=False
