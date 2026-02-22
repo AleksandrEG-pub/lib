@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS raw_employees (
     record_source VARCHAR(100)
 );
 
-
 CREATE TABLE IF NOT EXISTS stage_employees (
     hash_key VARCHAR(100) PRIMARY KEY,
     employee_id BIGINT,
@@ -18,4 +17,12 @@ CREATE TABLE IF NOT EXISTS stage_employees (
     salary DECIMAL(10,2),
     loaded_at TIMESTAMP,
     record_source VARCHAR(100)
+);
+
+CREATE TABLE IF NOT EXISTS data_quality_checks (
+    check_id BIGSERIAL,
+    check_name VARCHAR(50),
+    status VARCHAR(50),
+    value VARCHAR(100),
+    timestamp TIMESTAMP default current_timestamp
 );
