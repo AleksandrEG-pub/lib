@@ -260,12 +260,12 @@ docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-s
 
 #### ports
 Required ports on host:
-- 10452 - potgres
+- 10452 - postgres
 - 10458 - spark master ui, awailable by default
 - 10460 - airflow ui
 
 #### setup, launch scripts:
-Start required sevices:
+Start required services:
 ```
 ./start-database.sh && ./start-spark.sh && ./start-airflow.sh
 ```
@@ -320,10 +320,70 @@ If upload and check were successful, then send success notification:
 If any upload or check failed, then send failure notification:
 ```[upload_from_s3_to_postgres, upload_check] >> notify_failure```
 
-Ideally, notificaiton server be separated from pipeline server.
+Ideally, notification server be separated from pipeline server.
 
-## Deploy, week 12
+## Deploy, week 12 (ETL Pipeline: Учётные системы → Хранилище)
+
+### Быстрый старт
+#### ports
+Required ports on host:
+- 10452 - postgres
+- 10455 - grafana ui
+- 10460 - airflow ui
+- 10457 - s3 ui (if admin is launched)
+
+#### setup, launch scripts:
+Start required services:
+```
+./start-deploy-airflow.sh
+
+# optional, s3 ui
+docker compose -f docker-compose-deploy.yaml exec -d seaweedfs /usr/bin/weed admin
+```
+
+#### application description
+Application is based on airflow. Schema and description of tables in:
+```
+docs/data_dictionary.md
+docs/diagram.txt
+docs/pipeline-scheme.png
+``` 
 
 
+It has 5 dags:
+- init_structure. 
+  manual only, creates tables in postgres
+- write_data_to_source_file
+  manual only, write data to source file in s3 bucket (not append, always override file)
+- upload_employee_from_source_to_raw
+  scheduled task, runs every hour, loads data from s3 source to raw table in postgres. 
+  No transformations, adds metadata columns: loaded_at, record_source
+- upload_employee_from_raw_to_stage
+  scheduled task, runs every hour, loads data from raw table to stage table in postgres.
+  Apply types, deduplicates records by hash, adds hash column as Primary key
+- quality_ckeck_data_upload
+  scheduled task, runs every hour
+  Runs freshness and fullness checks and writes results to 'data_quality_checks'
 
+
+#### DAG configuration
+Pipeline variables located in environment files:
+```
+src/deploy/airflow/dags/modules/env/database.env
+src/deploy/airflow/dags/modules/env/s3.env
+```
+
+
+Scheduling must be enabled from ui.
+
+#### grafana description
+Log/pass: admin/admin
+
+Grafana contains 2 dashboards:
+- freshness
+- fullness
+
+Applied color scheme for 'Not OK' values: red / green, when values are outside expected range:
+- freshness, last record in raw table is older than 24 hours
+- fullness, amount of records in stage table and source file are 100+-5%
 
