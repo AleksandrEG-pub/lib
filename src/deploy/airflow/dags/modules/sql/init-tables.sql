@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS stage_employees (
 );
 
 CREATE TABLE IF NOT EXISTS data_quality_checks (
-    check_id BIGSERIAL,
+    check_id PRIMARY KEY BIGSERIAL,
     check_name VARCHAR(50),
     status VARCHAR(50),
     value VARCHAR(100),
