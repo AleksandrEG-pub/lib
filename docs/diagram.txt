@@ -1,0 +1,16 @@
+flowchart TD
+
+    %% Manual DAGs
+    A["init_structure DAG (manual)"] -->|creates tables| DB[(Postgres)]
+
+    B["write_data_to_source_file DAG (manual)"] -->|overwrite file| S3-init[(S3 Source File)]
+
+    %% Scheduled Flow
+    S3[(S3 Source File)] --> C["upload_employee_from_source_to_raw DAG (hourly)"]
+    C -->| +loaded_at, +record_source| RAW[('raw_employees' table)]
+
+    RAW --> D["upload_employee_from_raw_to_stage DAG (hourly)"]
+    D -->|type casting + hash + deduplication| STAGE-PIPELINE[('stage_employee' table)]
+
+    STAGE-DATAQUALITY[('stage_employee' table)] --> E["quality_check_data_upload DAG (hourly)"]
+    E -->|freshness + fullness results| DQ[('data_quality_checks' table)]
