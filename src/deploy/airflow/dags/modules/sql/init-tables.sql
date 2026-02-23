@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS raw_employees (
     age VARCHAR(5),
     city VARCHAR(100),
     salary VARCHAR(15),
-    loaded_at TIMESTAMP,
-    record_source VARCHAR(100)
+    loaded_at TIMESTAMP NOT NULL,
+    record_source VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS stage_employees (
@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS stage_employees (
     age INTEGER,
     city VARCHAR(100),
     salary DECIMAL(10,2),
-    loaded_at TIMESTAMP,
-    record_source VARCHAR(100)
+    loaded_at TIMESTAMP NOT NULL,
+    record_source VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS data_quality_checks (
@@ -26,3 +26,6 @@ CREATE TABLE IF NOT EXISTS data_quality_checks (
     value VARCHAR(100),
     timestamp TIMESTAMP default current_timestamp
 );
+
+CREATE INDEX idx_loaded_at ON raw_employees(loaded_at DESC);
+CREATE INDEX idx_created_at ON data_quality_checks(timestamp DESC);
